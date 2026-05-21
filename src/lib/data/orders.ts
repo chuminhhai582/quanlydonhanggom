@@ -9,7 +9,7 @@ import { OrderWithCustomer, OrderStatus } from '@/lib/types';
  */
 export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCustomer[]> {
   // Kiểm tra Supabase đã cấu hình chưa
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co') {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     // Fallback mock-data
     const { getOrdersWithCustomer } = await import('@/lib/mock-data');
     return getOrdersWithCustomer(role);
@@ -93,7 +93,7 @@ export async function uploadProgressImage(
   orderId: string,
   file: File
 ): Promise<{ url: string; path: string } | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co') {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return null; // Không upload khi chưa cấu hình
   }
 

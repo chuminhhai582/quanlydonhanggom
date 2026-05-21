@@ -31,9 +31,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co') {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
       return NextResponse.json(
-        { error: 'Chưa cấu hình Supabase. Kiểm tra NEXT_PUBLIC_SUPABASE_URL.' },
+        { error: 'Chưa cấu hình Supabase. Thêm NEXT_PUBLIC_SUPABASE_URL trên Vercel.' },
         { status: 400 }
       );
     }
