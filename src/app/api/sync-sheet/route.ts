@@ -160,105 +160,206 @@ async function syncSheetToApp() {
   const dataRows = sheetData.slice(1);
 
   let added = 0, updated = 0, skipped = 0;
+  const errors: string[] = [];
 
   for (const row of dataRows) {
     const orderCode = row[0]?.trim();
     if (!orderCode) { skipped++; continue; }
 
-    // Kiểm tra đơn đã tồn tại
+    // Kiểm tra đơn đã tồn tại theo Mã đơn (cột A - ID gốc)
     const { data: existing } = await supabase
       .from('orders')
       .select('id')
       .eq('order_code', orderCode)
-      .single();
+      .maybeSingle();
+
+    // Parse ngày từ Sheet (DD/MM/YYYY) → PostgreSQL (YYYY-MM-DD)
+    const rawDate = row[5]?.trim();
+    const parsedDate = parseSheetDate(rawDate);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Map trạng thái từ label tiếng Việt → enum
+    const statusLabel = row[6]?.trim();
+    const statusMap: Record<string, string> = {
+      'Chưa bắt đầu': 'not_started',
+      'Chưa BD': 'not_started',
+      'Đang chế tác': 'crafting',
+      'Chế tác': 'crafting',
+      'Đang phơi khô': 'drying',
+      'Phơi khô': 'drying',
+      'Đang nung': 'firing',
+      'Nung': 'firing',
+      'Hỏng - Vỡ': 'broken',
+      'Hỏng': 'broken',
+      'Đang làm lại': 'redoing',
+      'Làm lại': 'redoing',
+      'Đang nung lại': 'refiring',
+      'Nung lại': 'refiring',
+    };
+    const mappedStatus = statusLabel ? statusMap[statusLabel] || 'not_started' : 'not_started';
 
     if (existing) {
-      // Cập nhật (chỉ các trường cho phép)
-      const statusLabel = row[6]?.trim();
-      const statusMap: Record<string, string> = {
-        'Chưa bắt đầu': 'not_started',
-        'Đang chế tác': 'crafting',
-        'Đang phơi khô': 'drying',
-        'Đang nung': 'firing',
-        'Hỏng - Vỡ': 'broken',
-        'Đang làm lại': 'redoing',
-        'Đang nung lại': 'refiring',
-      };
-
+      // === CẬP NHẬT đơn đã tồn tại ===
       const updateData: Record<string, any> = {};
       if (statusLabel && statusMap[statusLabel]) {
         updateData.status = statusMap[statusLabel];
       }
-      if (row[5]?.trim()) updateData.start_date = row[5].trim();
+      if (parsedDate) updateData.start_date = parsedDate;
+      if (row[8]?.trim()) updateData.price = parseFloat(row[8]);
+      if (row[9]?.trim()) updateData.deposit = parseFloat(row[9]);
       if (row[10]?.trim()) updateData.custom_requirements = row[10].trim();
+      if (row[11]?.trim()) updateData.internal_note = row[11].trim();
 
       if (Object.keys(updateData).length > 0) {
-        await supabase.from('orders').update(updateData).eq('id', existing.id);
-        updated++;
+        const { error: updateErr } = await supabase
+          .from('orders')
+          .update(updateData)
+          .eq('id', existing.id);
+        if (updateErr) {
+          errors.push(`Cập nhật đơn ${orderCode}: ${updateErr.message}`);
+          console.error(`Update order ${orderCode} error:`, updateErr);
+        } else {
+          updated++;
+        }
       } else {
         skipped++;
       }
     } else {
-      // Tạo mới — cần tìm/tạo customer trước
+      // === TẠO MỚI — tìm/tạo customer trước ===
       const customerName = row[1]?.trim();
       const customerPhone = row[2]?.trim();
 
-      if (!customerName) { skipped++; continue; }
+      if (!customerName) {
+        errors.push(`Đơn ${orderCode}: thiếu tên khách hàng`);
+        skipped++;
+        continue;
+      }
 
-      // Tìm customer hoặc tạo mới
-      let customerId: string;
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('name', customerName)
-        .single();
+      // Tìm customer theo tên hoặc SĐT
+      let customerId: string | null = null;
 
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-      } else {
-        const { data: newCustomer, error: insertCustomerErr } = await supabase
+      if (customerPhone) {
+        const { data: byPhone } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('phone', customerPhone)
+          .maybeSingle();
+        if (byPhone) customerId = byPhone.id;
+      }
+
+      if (!customerId) {
+        const { data: byName } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('name', customerName)
+          .maybeSingle();
+        if (byName) customerId = byName.id;
+      }
+
+      // Tạo customer mới nếu chưa có
+      if (!customerId) {
+        const { data: newCustomer, error: insertCustErr } = await supabase
           .from('customers')
           .insert({ name: customerName, phone: customerPhone || null })
           .select('id')
           .single();
-        if (insertCustomerErr) {
-          console.error('Error creating customer:', insertCustomerErr, 'Name:', customerName);
+        if (insertCustErr) {
+          errors.push(`Tạo KH "${customerName}": ${insertCustErr.message}`);
+          console.error('Insert customer error:', insertCustErr);
+          skipped++;
+          continue;
         }
         customerId = newCustomer?.id;
       }
 
-      if (!customerId) { skipped++; continue; }
+      if (!customerId) {
+        errors.push(`Đơn ${orderCode}: không tạo được khách hàng`);
+        skipped++;
+        continue;
+      }
 
+      // Parse giá & cọc
+      const price = row[8]?.trim() ? parseFloat(row[8].replace(/,/g, '')) : null;
+      const deposit = row[9]?.trim() ? parseFloat(row[9].replace(/,/g, '')) : null;
+
+      // Insert đơn hàng
       const { error: insertOrderErr } = await supabase.from('orders').insert({
         order_code: orderCode,
         customer_id: customerId,
         product_name: row[3]?.trim() || 'Chưa đặt tên',
         quantity: parseInt(row[4]) || 1,
-        start_date: row[5]?.trim() || null,
-        due_date: row[5]?.trim() || new Date().toISOString().split('T')[0],
-        price: row[8] ? parseFloat(row[8]) : null,
-        deposit: row[9] ? parseFloat(row[9]) : null,
+        start_date: parsedDate || today,
+        due_date: parsedDate || today, // Dùng ngày đặt làm hạn giao mặc định
+        status: mappedStatus,
+        price: isNaN(price as number) ? null : price,
+        deposit: isNaN(deposit as number) ? null : deposit,
         custom_requirements: row[10]?.trim() || null,
         internal_note: row[11]?.trim() || null,
       });
-      added++;
+
+      if (insertOrderErr) {
+        errors.push(`Tạo đơn ${orderCode}: ${insertOrderErr.message}`);
+        console.error(`Insert order ${orderCode} error:`, insertOrderErr);
+        skipped++;
+      } else {
+        added++;
+      }
     }
   }
 
   // Log kết quả
+  const status = errors.length > 0 ? (added > 0 ? 'partial' : 'failed') : 'success';
   await supabase.from('sync_logs').insert({
     direction: 'sheet_to_app',
     sheet_id: process.env.GOOGLE_SHEET_ID,
     rows_added: added,
     rows_updated: updated,
     rows_skipped: skipped,
-    rows_conflict: 0,
-    status: 'success',
+    rows_conflict: errors.length,
+    status,
+    error_message: errors.length > 0 ? errors.join('\n') : null,
   });
 
+  const message = errors.length > 0
+    ? `Đã nhập: +${added} mới, ${updated} cập nhật, ${skipped} bỏ qua. Lỗi: ${errors.length}`
+    : `Đã nhập: +${added} mới, ${updated} cập nhật, ${skipped} bỏ qua`;
+
   return NextResponse.json({
-    success: true,
-    message: `Đã nhập: +${added} mới, ${updated} cập nhật, ${skipped} bỏ qua`,
+    success: added > 0 || updated > 0,
+    message,
     added, updated, skipped,
+    errors: errors.length > 0 ? errors : undefined,
   });
 }
+
+/**
+ * Parse ngày từ Sheet (DD/MM/YYYY hoặc MM/DD/YYYY hoặc YYYY-MM-DD)
+ * → PostgreSQL format YYYY-MM-DD
+ */
+function parseSheetDate(raw: string | undefined | null): string | null {
+  if (!raw || !raw.trim()) return null;
+  const s = raw.trim();
+
+  // Nếu đã đúng format YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // DD/MM/YYYY
+  const ddmmyyyy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (ddmmyyyy) {
+    const day = ddmmyyyy[1].padStart(2, '0');
+    const month = ddmmyyyy[2].padStart(2, '0');
+    const year = ddmmyyyy[3];
+    // Nếu day > 12 thì chắc chắn là DD/MM/YYYY
+    // Nếu cả hai ≤ 12, ưu tiên DD/MM/YYYY (format VN)
+    return `${year}-${month}-${day}`;
+  }
+
+  // Fallback: thử parse bằng Date
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().split('T')[0];
+  }
+
+  return null;
+}
+
