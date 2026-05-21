@@ -36,7 +36,7 @@ export default function OrderDetailPage() {
   const [milestoneName, setMilestoneName] = useState('');
   const [updaterName, setUpdaterName] = useState('');
   const [updateNote, setUpdateNote] = useState('');
-  const [statusAfter, setStatusAfter] = useState<OrderStatus>('in_progress');
+  const [statusAfter, setStatusAfter] = useState<OrderStatus>('crafting');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const order = useMemo(() => {
@@ -84,7 +84,7 @@ export default function OrderDetailPage() {
     setUpdaterName('');
     setUpdateNote('');
     setUploadedImages([]);
-    setStatusAfter('in_progress');
+    setStatusAfter('crafting');
   };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -153,7 +153,7 @@ export default function OrderDetailPage() {
       <div className="space-y-2">
         <Label className="text-sm font-medium">Trạng thái đơn sau cập nhật</Label>
         <RadioGroup value={statusAfter} onValueChange={v => setStatusAfter(v as OrderStatus)} className="flex gap-3">
-          {(['not_started', 'in_progress', 'completed'] as OrderStatus[]).map(s => (
+          {(['not_started', 'crafting', 'drying', 'firing', 'broken', 'redoing', 'refiring'] as OrderStatus[]).map(s => (
             <label key={s} className={`
               flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all
               ${statusAfter === s
@@ -253,8 +253,8 @@ export default function OrderDetailPage() {
                 <p className="font-semibold text-sm mt-0.5">{order.start_date ? formatDate(order.start_date) : '—'}</p>
               </div>
               <div className={`rounded-xl p-3 ${overdue ? 'bg-red-50' : 'bg-[var(--color-cream)]'}`}>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Hạn giao</p>
-                <p className={`font-semibold text-sm mt-0.5 ${overdue ? 'text-red-600' : ''}`}>{formatDate(order.due_date)}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ngày đặt</p>
+                <p className={`font-semibold text-sm mt-0.5 ${overdue ? 'text-red-600' : ''}`}>{order.start_date ? formatDate(order.start_date) : '—'}</p>
               </div>
             </div>
 
@@ -269,7 +269,7 @@ export default function OrderDetailPage() {
             )}
 
             <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground w-20 shrink-0">Nhân viên</span>
+              <span className="text-xs text-muted-foreground w-20 shrink-0">Nghệ nhân</span>
               <div className="flex flex-wrap gap-1.5">
                 {order.assigned_staff.map(staff => (
                   <Badge key={staff.id} variant="secondary" className="rounded-full text-xs">

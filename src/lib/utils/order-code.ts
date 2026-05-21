@@ -30,8 +30,12 @@ export function formatPrice(price: number | null): string {
 export function getStatusLabel(status: string): string {
   switch (status) {
     case 'not_started': return 'Chưa bắt đầu';
-    case 'in_progress': return 'Đang chế tác';
-    case 'completed': return 'Đã hoàn thành';
+    case 'crafting': return 'Đang chế tác';
+    case 'drying': return 'Đang phơi khô';
+    case 'firing': return 'Đang nung';
+    case 'broken': return 'Hỏng - Vỡ';
+    case 'redoing': return 'Đang làm lại';
+    case 'refiring': return 'Đang nung lại';
     default: return status;
   }
 }
@@ -39,8 +43,12 @@ export function getStatusLabel(status: string): string {
 export function getStatusColor(status: string): string {
   switch (status) {
     case 'not_started': return '#94A3B8';
-    case 'in_progress': return '#C8621A';
-    case 'completed': return '#16A34A';
+    case 'crafting': return '#C8621A';
+    case 'drying': return '#0EA5E9';
+    case 'firing': return '#EAB308';
+    case 'broken': return '#DC2626';
+    case 'redoing': return '#F97316';
+    case 'refiring': return '#A855F7';
     default: return '#94A3B8';
   }
 }

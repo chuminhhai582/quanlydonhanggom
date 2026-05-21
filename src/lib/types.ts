@@ -3,7 +3,7 @@
 // ============================================
 
 // --- Enums ---
-export type OrderStatus = 'not_started' | 'in_progress' | 'completed';
+export type OrderStatus = 'not_started' | 'crafting' | 'drying' | 'firing' | 'broken' | 'redoing' | 'refiring';
 export type UpdateCreatorType = 'admin' | 'viewer';
 export type ExportStatus = 'success' | 'failed' | 'partial';
 export type SyncDirection = 'app_to_sheet' | 'sheet_to_app';

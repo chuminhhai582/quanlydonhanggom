@@ -55,16 +55,20 @@ function DashboardContent() {
   const counts = useMemo(() => ({
     all: orders.length,
     not_started: orders.filter(o => o.status === 'not_started').length,
-    in_progress: orders.filter(o => o.status === 'in_progress').length,
-    completed: orders.filter(o => o.status === 'completed').length,
+    crafting: orders.filter(o => o.status === 'crafting').length,
+    drying: orders.filter(o => o.status === 'drying').length,
+    firing: orders.filter(o => o.status === 'firing').length,
+    broken: orders.filter(o => o.status === 'broken').length,
+    redoing: orders.filter(o => o.status === 'redoing').length,
+    refiring: orders.filter(o => o.status === 'refiring').length,
   }), [orders]);
 
   const events: CalendarEvent[] = useMemo(() => {
     return filteredOrders.map(order => ({
       id: order.id,
       title: `${order.customer_name} - ${order.product_name}`,
-      start: parseISO(order.due_date),
-      end: parseISO(order.due_date),
+      start: order.start_date ? parseISO(order.start_date) : parseISO(order.created_at),
+      end: order.start_date ? parseISO(order.start_date) : parseISO(order.created_at),
       status: order.status,
       isOverdue: isOverdue(order.due_date, order.status),
       order,
@@ -111,7 +115,7 @@ function DashboardContent() {
       const hasIncomplete = filteredOrders.some(o => {
         const dueDate = parseISO(o.due_date);
         dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() === d.getTime() && o.status !== 'completed';
+        return dueDate.getTime() === d.getTime() && o.status === 'broken';
       });
       if (hasIncomplete) {
         return {
@@ -220,17 +224,11 @@ function DashboardContent() {
                     <p className="text-xs text-muted-foreground">Ngày đặt</p>
                     <p className="font-semibold text-sm">{selectedOrder.start_date ? formatShortDate(selectedOrder.start_date) : '—'}</p>
                   </div>
-                  <div className={`rounded-xl p-3 border ${isOverdue(selectedOrder.due_date, selectedOrder.status) ? 'bg-red-50 border-red-200' : 'bg-white border-[var(--color-border-warm)]'}`}>
-                    <p className="text-xs text-muted-foreground">Hạn giao</p>
-                    <p className={`font-semibold text-sm ${isOverdue(selectedOrder.due_date, selectedOrder.status) ? 'text-red-600' : ''}`}>
-                      {formatShortDate(selectedOrder.due_date)}
-                    </p>
-                  </div>
                 </div>
 
                 {/* Staff */}
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Nhân viên phụ trách</p>
+                  <p className="text-sm text-muted-foreground mb-2">Nghệ nhân phụ trách</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedOrder.assigned_staff.map(staff => (
                       <Badge key={staff.id} variant="secondary" className="rounded-full" style={{ borderColor: staff.avatar_color + '40' }}>

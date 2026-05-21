@@ -222,16 +222,40 @@
   border: 1px solid #94A3B830;
 }
 
-.status-chip-in_progress {
+.status-chip-crafting {
   background: #C8621A10;
   color: #C8621A;
   border: 1px solid #C8621A30;
 }
 
-.status-chip-completed {
-  background: #16A34A10;
-  color: #16A34A;
-  border: 1px solid #16A34A30;
+.status-chip-drying {
+  background: #0EA5E910;
+  color: #0284C7;
+  border: 1px solid #0EA5E930;
+}
+
+.status-chip-firing {
+  background: #EAB30810;
+  color: #CA8A04;
+  border: 1px solid #EAB30830;
+}
+
+.status-chip-broken {
+  background: #DC262610;
+  color: #DC2626;
+  border: 1px solid #DC262630;
+}
+
+.status-chip-redoing {
+  background: #F9731610;
+  color: #EA580C;
+  border: 1px solid #F9731630;
+}
+
+.status-chip-refiring {
+  background: #A855F710;
+  color: #9333EA;
+  border: 1px solid #A855F730;
 }
 
 /* Glass effect */

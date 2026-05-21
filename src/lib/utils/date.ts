@@ -22,7 +22,8 @@ export function formatDateTime(date: string | Date): string {
 }
 
 export function isOverdue(dueDate: string | Date, status: string): boolean {
-  if (status === 'completed') return false;
+  // Trạng thái 'broken' thì không tính trễ hạn (hỏng rồi)
+  if (status === 'broken') return false;
   const d = typeof dueDate === 'string' ? parseISO(dueDate) : dueDate;
   return isBefore(d, new Date());
 }
@@ -39,14 +40,14 @@ export function getDaysUntilDue(dueDate: string | Date): number {
 }
 
 export function getDueDateColor(dueDate: string, status: string): string {
-  if (status === 'completed') return 'text-green-600';
+  if (status === 'broken') return 'text-red-600 font-semibold';
   if (isOverdue(dueDate, status)) return 'text-red-600 font-semibold';
   if (isDueSoon(dueDate)) return 'text-amber-600 font-semibold';
   return 'text-[var(--text-primary)]';
 }
 
 export function getDueDateLabel(dueDate: string, status: string): string {
-  if (status === 'completed') return 'Đã xong';
+  if (status === 'broken') return 'Hỏng - Vỡ';
   const days = getDaysUntilDue(dueDate);
   if (days < 0) return `Trễ ${Math.abs(days)} ngày`;
   if (days === 0) return 'Hôm nay';

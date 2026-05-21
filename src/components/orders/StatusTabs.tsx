@@ -8,16 +8,24 @@ interface StatusTabsProps {
   counts: {
     all: number;
     not_started: number;
-    in_progress: number;
-    completed: number;
+    crafting: number;
+    drying: number;
+    firing: number;
+    broken: number;
+    redoing: number;
+    refiring: number;
   };
 }
 
 const tabs: Omit<StatusTabItem, 'count'>[] = [
   { key: 'all', label: 'Tất cả', icon: '', color: '#7D3A1E' },
-  { key: 'not_started', label: 'Chưa BĐ', icon: '🔘', color: '#94A3B8' },
-  { key: 'in_progress', label: 'Đang CT', icon: '🟠', color: '#C8621A' },
-  { key: 'completed', label: 'Đã HT', icon: '🟢', color: '#16A34A' },
+  { key: 'not_started', label: 'Chưa BĐ', icon: '⚪', color: '#94A3B8' },
+  { key: 'crafting', label: 'Chế tác', icon: '🟠', color: '#C8621A' },
+  { key: 'drying', label: 'Phơi khô', icon: '🔵', color: '#0EA5E9' },
+  { key: 'firing', label: 'Nung', icon: '🟡', color: '#EAB308' },
+  { key: 'broken', label: 'Hỏng', icon: '🔴', color: '#DC2626' },
+  { key: 'redoing', label: 'Làm lại', icon: '🟠', color: '#F97316' },
+  { key: 'refiring', label: 'Nung lại', icon: '🟣', color: '#A855F7' },
 ];
 
 export default function StatusTabs({ counts }: StatusTabsProps) {
@@ -43,13 +51,14 @@ export default function StatusTabs({ counts }: StatusTabsProps) {
           {tabs.map(tab => {
             const count = counts[tab.key as keyof typeof counts];
             const isActive = activeStatus === tab.key;
+            if (tab.key !== 'all' && count === 0) return null;
 
             return (
               <button
                 key={tab.key}
                 onClick={() => handleTabClick(tab.key)}
                 className={`
-                  flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap
+                  flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap
                   transition-all duration-200 shrink-0
                   ${isActive
                     ? 'text-white shadow-md'
@@ -60,10 +69,10 @@ export default function StatusTabs({ counts }: StatusTabsProps) {
                   boxShadow: `0 4px 14px ${tab.color}30`,
                 } : undefined}
               >
-                {tab.icon && <span className="text-xs">{tab.icon}</span>}
+                {tab.icon && <span className="text-[10px]">{tab.icon}</span>}
                 {tab.label}
                 <span className={`
-                  ml-1 px-1.5 py-0.5 rounded-md text-xs font-bold
+                  ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold
                   ${isActive ? 'bg-white/20' : 'bg-gray-100'}
                 `}>
                   {count}

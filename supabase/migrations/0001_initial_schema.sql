@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Custom ENUM types
-CREATE TYPE order_status AS ENUM ('not_started', 'in_progress', 'completed');
+CREATE TYPE order_status AS ENUM ('not_started', 'crafting', 'drying', 'firing', 'broken', 'redoing', 'refiring');
 CREATE TYPE update_creator_type AS ENUM ('admin', 'viewer');
 CREATE TYPE export_status AS ENUM ('success', 'failed', 'partial');
 CREATE TYPE sync_direction AS ENUM ('app_to_sheet', 'sheet_to_app');
