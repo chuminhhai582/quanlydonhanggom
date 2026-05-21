@@ -9,7 +9,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import StatusTabs from '@/components/orders/StatusTabs';
 import StatusBadge from '@/components/orders/StatusBadge';
 import { useAuth } from '@/lib/auth/auth-context';
-import { getOrdersWithCustomer } from '@/lib/mock-data';
+import { useOrders } from '@/lib/hooks/useOrders';
 import { OrderWithCustomer, CalendarEvent, OrderStatus } from '@/lib/types';
 import { isOverdue } from '@/lib/utils/date';
 import { getStatusColor } from '@/lib/utils/order-code';
@@ -44,9 +44,7 @@ function DashboardContent() {
 
   const statusFilter = (searchParams.get('status') as OrderStatus | null);
 
-  const orders = useMemo(() => {
-    return getOrdersWithCustomer(role || 'viewer');
-  }, [role]);
+  const { orders } = useOrders(role || 'viewer');
 
   const filteredOrders = useMemo(() => {
     if (!statusFilter) return orders;

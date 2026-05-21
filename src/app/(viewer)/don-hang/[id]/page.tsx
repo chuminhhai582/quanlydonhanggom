@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/auth-context';
-import { getOrdersWithCustomer } from '@/lib/mock-data';
+import { useOrders } from '@/lib/hooks/useOrders';
 import { OrderStatus } from '@/lib/types';
 import InlineStatusSelect from '@/components/orders/InlineStatusSelect';
 import PhoneDisplay from '@/components/orders/PhoneDisplay';
@@ -30,9 +30,8 @@ export default function OrderDetailPage() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
-  // State đơn hàng
-  const allOrders = useMemo(() => getOrdersWithCustomer(role || 'viewer'), [role]);
-  const [ordersState, setOrdersState] = useState(allOrders);
+  // State đơn hàng — fetch từ Supabase
+  const { orders: ordersState, setOrders: setOrdersState } = useOrders(role || 'viewer');
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   // State ảnh tiến độ — mới nhất trước

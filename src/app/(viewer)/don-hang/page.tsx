@@ -10,7 +10,8 @@ import InlineStaffSelect from '@/components/orders/InlineStaffSelect';
 import InlineImageCell from '@/components/orders/InlineImageCell';
 import InlineDateCell from '@/components/orders/InlineDateCell';
 import { useAuth } from '@/lib/auth/auth-context';
-import { getOrdersWithCustomer, mockStaffNames } from '@/lib/mock-data';
+import { mockStaffNames } from '@/lib/mock-data';
+import { useOrders } from '@/lib/hooks/useOrders';
 import { OrderStatus } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/utils/date';
 import { getStatusLabel } from '@/lib/utils/order-code';
@@ -39,8 +40,8 @@ function OrdersTableContent() {
   }, []);
   const closeAllDropdowns = useCallback(() => setActiveDropdown(null), []);
 
-  // Dữ liệu
-  const [ordersState, setOrdersState] = useState(() => getOrdersWithCustomer(role || 'viewer'));
+  // Dữ liệu — fetch từ Supabase, fallback mock
+  const { orders: ordersState, setOrders: setOrdersState } = useOrders(role || 'viewer');
   const counts = useOrderCounts(ordersState);
 
   const filteredOrders = useMemo(() => {
