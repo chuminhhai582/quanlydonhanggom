@@ -19,10 +19,9 @@ export function useOrders(role: 'admin' | 'viewer') {
       const res = await fetch(`/api/orders?role=${role}`);
       if (!res.ok) throw new Error('API error');
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setOrders(data);
       }
-      // Nếu API trả mảng rỗng → giữ mock-data (Supabase chưa có data)
     } catch {
       setError('Không thể kết nối Supabase, đang dùng dữ liệu mẫu');
       // Giữ nguyên mock-data đã set ở useState initializer

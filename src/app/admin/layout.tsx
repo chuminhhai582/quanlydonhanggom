@@ -15,8 +15,6 @@ const adminNavItems = [
   { href: '/dashboard', label: 'Dashboard Lịch', icon: CalendarDays, group: 'main' },
   { href: '/don-hang', label: 'Dashboard Bảng', icon: LayoutList, group: 'main' },
   { href: '/admin/don-hang/moi', label: 'Tạo đơn mới', icon: PlusCircle, group: 'orders' },
-  { href: '/admin/khach-hang', label: 'Khách hàng', icon: Users, group: 'manage' },
-  { href: '/admin/san-pham', label: 'Sản phẩm', icon: Package, group: 'manage' },
   { href: '/admin/dong-bo-sheet', label: 'Đồng bộ Sheet', icon: FileSpreadsheet, group: 'tools' },
   { href: '/admin/cai-dat', label: 'Cài đặt', icon: Settings, group: 'tools' },
 ];
@@ -24,7 +22,6 @@ const adminNavItems = [
 const groups = [
   { key: 'main', label: 'Xem dữ liệu' },
   { key: 'orders', label: 'Đơn hàng' },
-  { key: 'manage', label: 'Quản lý' },
   { key: 'tools', label: 'Công cụ' },
 ];
 

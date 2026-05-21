@@ -143,8 +143,6 @@ export default function Header() {
                   <p className="text-xs text-muted-foreground px-4 mb-2 uppercase tracking-wider">Admin</p>
                   {[
                     { href: '/admin/don-hang/moi', label: 'Tạo đơn mới' },
-                    { href: '/admin/khach-hang', label: 'Khách hàng' },
-                    { href: '/admin/san-pham', label: 'Sản phẩm' },
                     { href: '/admin/dong-bo-sheet', label: 'Đồng bộ Sheet' },
                     { href: '/admin/cai-dat', label: 'Cài đặt' },
                   ].map(item => (
