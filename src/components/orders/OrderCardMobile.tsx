@@ -49,8 +49,9 @@ export default function OrderCardMobile({
             />
           </div>
           <div className="flex items-center gap-1">
-            <Link href={`/don-hang/${order.id}`} className="p-1.5 -mr-1.5 rounded-lg hover:bg-[var(--color-cream)] transition-colors">
-              <ChevronRight size={16} className="text-muted-foreground" />
+            <Link href={`/don-hang/${order.id}`} className="flex items-center gap-1 text-[11px] font-medium text-[var(--color-terra)] hover:text-[var(--color-ember)] transition-colors px-2 py-1 rounded-lg hover:bg-[var(--color-cream)]">
+              Xem chi tiết
+              <ChevronRight size={14} />
             </Link>
           </div>
         </div>
@@ -110,8 +111,9 @@ export default function OrderCardMobile({
             onToggle={() => toggleDropdown(`${prefix}status-${order.id}`)}
           />
         </div>
-        <Link href={`/don-hang/${order.id}`} className="p-1.5 -mr-1.5 rounded-lg hover:bg-[var(--color-cream)] transition-colors">
-          <ChevronRight size={16} className="text-muted-foreground" />
+        <Link href={`/don-hang/${order.id}`} className="flex items-center gap-0.5 text-[11px] font-medium text-[var(--color-terra)] hover:text-[var(--color-ember)] transition-colors px-1.5 py-1 -mr-1.5 rounded-lg hover:bg-[var(--color-cream)]">
+          Xem chi tiết
+          <ChevronRight size={14} />
         </Link>
       </div>
 

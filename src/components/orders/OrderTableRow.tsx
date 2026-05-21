@@ -84,11 +84,10 @@ export default function OrderTableRow({
       </td>
       <td className="py-3 px-3 xl:px-4">
         <div className="flex items-center gap-1 justify-end">
-          <Link href={`/don-hang/${order.id}`}>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-[var(--color-cream)]">
-              <Eye size={14} />
-            </Button>
-          </Link>
+          <Link href={`/don-hang/${order.id}`} className="flex items-center gap-1 text-xs font-medium text-[var(--color-terra)] hover:text-[var(--color-ember)] transition-colors whitespace-nowrap">
+              <Eye size={13} />
+              Xem chi tiết
+            </Link>
           {role === 'admin' && (
             <>
               <Link href={`/admin/don-hang/${order.id}/sua`}>
