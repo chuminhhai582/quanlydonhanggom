@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, parse, startOfWeek, getDay, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import StatusTabs from '@/components/orders/StatusTabs';
@@ -14,6 +14,7 @@ import { OrderWithCustomer, CalendarEvent, OrderStatus } from '@/lib/types';
 import { isOverdue } from '@/lib/utils/date';
 import { getStatusColor } from '@/lib/utils/order-code';
 import { formatShortDate, formatRelativeTime } from '@/lib/utils/date';
+import { useOrderCounts } from '@/lib/hooks/useOrderCounts';
 import PhoneDisplay from '@/components/orders/PhoneDisplay';
 import {
   Sheet,
@@ -52,16 +53,7 @@ function DashboardContent() {
     return orders.filter(o => o.status === statusFilter);
   }, [orders, statusFilter]);
 
-  const counts = useMemo(() => ({
-    all: orders.length,
-    not_started: orders.filter(o => o.status === 'not_started').length,
-    crafting: orders.filter(o => o.status === 'crafting').length,
-    drying: orders.filter(o => o.status === 'drying').length,
-    firing: orders.filter(o => o.status === 'firing').length,
-    broken: orders.filter(o => o.status === 'broken').length,
-    redoing: orders.filter(o => o.status === 'redoing').length,
-    refiring: orders.filter(o => o.status === 'refiring').length,
-  }), [orders]);
+  const counts = useOrderCounts(orders);
 
   const events: CalendarEvent[] = useMemo(() => {
     return filteredOrders.map(order => ({

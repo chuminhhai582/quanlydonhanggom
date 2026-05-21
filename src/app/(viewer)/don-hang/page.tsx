@@ -1,298 +1,39 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect, Suspense } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import StatusTabs from '@/components/orders/StatusTabs';
-import StatusBadge from '@/components/orders/StatusBadge';
 import PhoneDisplay from '@/components/orders/PhoneDisplay';
+import InlineStatusSelect from '@/components/orders/InlineStatusSelect';
+import InlineStaffSelect from '@/components/orders/InlineStaffSelect';
+import InlineImageCell from '@/components/orders/InlineImageCell';
+import InlineDateCell from '@/components/orders/InlineDateCell';
 import { useAuth } from '@/lib/auth/auth-context';
 import { getOrdersWithCustomer, mockStaffNames } from '@/lib/mock-data';
-import { OrderWithCustomer, OrderStatus } from '@/lib/types';
-import { formatShortDate, formatRelativeTime } from '@/lib/utils/date';
-import { getStatusLabel, getStatusColor } from '@/lib/utils/order-code';
+import { OrderStatus } from '@/lib/types';
+import { formatRelativeTime } from '@/lib/utils/date';
+import { getStatusLabel } from '@/lib/utils/order-code';
+import { useOrderCounts } from '@/lib/hooks/useOrderCounts';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  Search, Plus, FileSpreadsheet, Eye, Pencil, Trash2, ChevronRight, ImagePlus, X, ChevronDown, Check
+  Search, Plus, FileSpreadsheet, Eye, Pencil, Trash2, ChevronRight, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Danh sách tất cả trạng thái
-const ALL_STATUSES: OrderStatus[] = [
-  'not_started', 'crafting', 'drying', 'firing', 'broken', 'redoing', 'refiring'
-];
-
-// ==========================================
-// Quản lý dropdown: chỉ 1 dropdown mở tại 1 thời điểm
-// Key format: "status-{orderId}" hoặc "staff-{orderId}"
-// ==========================================
-
-// ---------- Inline Status Dropdown ----------
-function InlineStatusSelect({
-  value, orderId, onUpdate, isOpen, onToggle
-}: {
-  value: OrderStatus;
-  orderId: string;
-  onUpdate: (id: string, status: OrderStatus) => void;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
-        menuRef.current && !menuRef.current.contains(e.target as Node)
-      ) {
-        onToggle();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onToggle]);
-
-  return (
-    <div className="relative">
-      <button
-        ref={triggerRef}
-        onClick={onToggle}
-        className="flex items-center gap-1.5 group cursor-pointer"
-      >
-        <StatusBadge status={value} size="sm" />
-        <ChevronDown size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-      </button>
-      {isOpen && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 top-full mt-1 z-[100] bg-white rounded-xl shadow-xl border border-[var(--color-border-warm)] py-1.5 min-w-[180px] animate-scale-in"
-          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.12))' }}
-        >
-          {ALL_STATUSES.map(s => (
-            <button
-              key={s}
-              onClick={() => { onUpdate(orderId, s); onToggle(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--color-cream)]/60 transition-colors ${s === value ? 'bg-[var(--color-cream)]/40 font-medium' : ''}`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getStatusColor(s) }} />
-              {getStatusLabel(s)}
-              {s === value && <Check size={14} className="ml-auto text-[var(--color-terra)]" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Inline Staff Dropdown ----------
-function InlineStaffSelect({
-  currentStaff, orderId, onUpdate, isOpen, onToggle
-}: {
-  currentStaff: { id: string; name: string; avatar_color: string }[];
-  orderId: string;
-  onUpdate: (id: string, staffId: string) => void;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const selectedId = currentStaff[0]?.id || '';
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
-        menuRef.current && !menuRef.current.contains(e.target as Node)
-      ) {
-        onToggle();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onToggle]);
-
-  return (
-    <div className="relative">
-      <button
-        ref={triggerRef}
-        onClick={onToggle}
-        className="flex items-center gap-1.5 group cursor-pointer"
-      >
-        {currentStaff.length > 0 ? (
-          <div className="flex items-center gap-1.5">
-            <Avatar className="w-7 h-7 border-2 border-white">
-              <AvatarFallback className="text-[10px] font-bold text-white" style={{ background: currentStaff[0].avatar_color }}>
-                {currentStaff[0].name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs text-muted-foreground hidden lg:inline">{currentStaff[0].name}</span>
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">Chọn</span>
-        )}
-        <ChevronDown size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-      </button>
-      {isOpen && (
-        <div
-          ref={menuRef}
-          className="absolute left-0 top-full mt-1 z-[100] bg-white rounded-xl shadow-xl border border-[var(--color-border-warm)] py-1.5 min-w-[160px] animate-scale-in"
-          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.12))' }}
-        >
-          {mockStaffNames.map(staff => (
-            <button
-              key={staff.id}
-              onClick={() => { onUpdate(orderId, staff.id); onToggle(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--color-cream)]/60 transition-colors ${staff.id === selectedId ? 'bg-[var(--color-cream)]/40 font-medium' : ''}`}
-            >
-              <Avatar className="w-6 h-6">
-                <AvatarFallback className="text-[9px] font-bold text-white" style={{ background: staff.avatar_color }}>
-                  {staff.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              {staff.name}
-              {staff.id === selectedId && <Check size={14} className="ml-auto text-[var(--color-terra)]" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Inline Image Cell ----------
-function InlineImageCell({
-  images, orderId, canUpload
-}: {
-  images: string[]; orderId: string; canUpload: boolean;
-}) {
-  const [imgs, setImgs] = useState<string[]>(images);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const remaining = 3 - imgs.length;
-    if (remaining <= 0) {
-      toast.error('Tối đa 3 ảnh minh họa');
-      return;
-    }
-    const newImgs = [...imgs];
-    for (let i = 0; i < Math.min(files.length, remaining); i++) {
-      newImgs.push(URL.createObjectURL(files[i]));
-    }
-    setImgs(newImgs);
-    toast.success('Đã thêm ảnh minh họa');
-    e.target.value = '';
-  };
-
-  const removeImg = (idx: number) => {
-    setImgs(prev => prev.filter((_, i) => i !== idx));
-    toast.success('Đã xóa ảnh');
-  };
-
-  return (
-    <div className="flex items-center gap-1.5">
-      {imgs.map((src, i) => (
-        <div key={i} className="relative group w-9 h-9 rounded-lg overflow-hidden border border-[var(--color-border-warm)] shrink-0">
-          <img src={src} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" />
-          {canUpload && (
-            <button
-              onClick={() => removeImg(i)}
-              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-            >
-              <X size={12} className="text-white" />
-            </button>
-          )}
-        </div>
-      ))}
-      {canUpload && imgs.length < 3 && (
-        <>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="w-9 h-9 rounded-lg border-2 border-dashed border-[var(--color-border-warm)] flex items-center justify-center hover:border-[var(--color-terra)] hover:bg-[var(--color-cream)]/50 transition-colors shrink-0"
-          >
-            <ImagePlus size={14} className="text-muted-foreground" />
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
-          />
-        </>
-      )}
-      {!canUpload && imgs.length === 0 && (
-        <span className="text-xs text-muted-foreground">—</span>
-      )}
-    </div>
-  );
-}
-
-// ---------- Inline Date Cell ----------
-function InlineDateCell({
-  value, orderId, onUpdate, isEditing, onStartEdit, onStopEdit
-}: {
-  value: string | null;
-  orderId: string;
-  onUpdate: (id: string, date: string) => void;
-  isEditing: boolean;
-  onStartEdit: () => void;
-  onStopEdit: () => void;
-}) {
-  const display = value ? formatShortDate(value) : '—';
-
-  if (isEditing) {
-    return (
-      <input
-        type="date"
-        defaultValue={value || ''}
-        autoFocus
-        className="text-xs border border-[var(--color-terra)] rounded-lg px-2 py-1 w-[130px] outline-none focus:ring-2 focus:ring-[var(--color-terra)]/30"
-        onBlur={(e) => {
-          if (e.target.value) {
-            onUpdate(orderId, e.target.value);
-            toast.success('Đã cập nhật ngày đặt');
-          }
-          onStopEdit();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-          if (e.key === 'Escape') onStopEdit();
-        }}
-      />
-    );
-  }
-
-  return (
-    <button
-      onClick={onStartEdit}
-      className="text-sm font-medium hover:text-[var(--color-terra)] hover:underline decoration-dashed underline-offset-2 transition-colors cursor-pointer"
-    >
-      {display}
-    </button>
-  );
-}
-
+// Giới hạn stagger animation để tránh jank
+const MAX_STAGGER_DELAY = 0.3;
 
 function OrdersTableContent() {
   const searchParams = useSearchParams();
   const { role } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery);
   const statusFilter = searchParams.get('status') as OrderStatus | null;
 
-  // ============================================
-  // State quản lý dropdown: chỉ 1 cái mở tại 1 thời điểm
-  // Giá trị: null (tất cả đóng) hoặc "status-{orderId}" / "staff-{orderId}" / "date-{orderId}"
-  // ============================================
+  // Quản lý dropdown: chỉ 1 cái mở tại 1 thời điểm
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const toggleDropdown = useCallback((key: string) => {
@@ -303,28 +44,17 @@ function OrdersTableContent() {
     setActiveDropdown(null);
   }, []);
 
-  // Dữ liệu mẫu
+  // Dữ liệu
   const [ordersState, setOrdersState] = useState(() => getOrdersWithCustomer(role || 'viewer'));
-  const orders = ordersState;
-
-  const counts = useMemo(() => ({
-    all: orders.length,
-    not_started: orders.filter(o => o.status === 'not_started').length,
-    crafting: orders.filter(o => o.status === 'crafting').length,
-    drying: orders.filter(o => o.status === 'drying').length,
-    firing: orders.filter(o => o.status === 'firing').length,
-    broken: orders.filter(o => o.status === 'broken').length,
-    redoing: orders.filter(o => o.status === 'redoing').length,
-    refiring: orders.filter(o => o.status === 'refiring').length,
-  }), [orders]);
+  const counts = useOrderCounts(ordersState);
 
   const filteredOrders = useMemo(() => {
-    let result = orders;
+    let result = ordersState;
     if (statusFilter) {
       result = result.filter(o => o.status === statusFilter);
     }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       result = result.filter(o =>
         o.customer_name.toLowerCase().includes(q) ||
         o.order_code.toLowerCase().includes(q) ||
@@ -332,9 +62,9 @@ function OrdersTableContent() {
       );
     }
     return result;
-  }, [orders, statusFilter, searchQuery]);
+  }, [ordersState, statusFilter, debouncedSearch]);
 
-  // --- Handlers cho Inline Editing ---
+  // --- Handlers ---
   const handleStatusUpdate = useCallback((orderId: string, newStatus: OrderStatus) => {
     setOrdersState(prev =>
       prev.map(o => o.id === orderId ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o)
@@ -356,6 +86,9 @@ function OrdersTableContent() {
       prev.map(o => o.id === orderId ? { ...o, start_date: date, updated_at: new Date().toISOString() } : o)
     );
   }, []);
+
+  const getStaggerDelay = (index: number) =>
+    Math.min(index * 0.03, MAX_STAGGER_DELAY);
 
   return (
     <div>
@@ -414,7 +147,7 @@ function OrdersTableContent() {
                 <tr
                   key={order.id}
                   className="border-b border-[var(--color-border-warm)]/50 hover:bg-[var(--color-cream)]/30 transition-colors animate-fade-in-up"
-                  style={{ animationDelay: `${i * 0.03}s` }}
+                  style={{ animationDelay: `${getStaggerDelay(i)}s` }}
                 >
                   <td className="py-3 px-4">
                     <span className="font-mono text-xs font-medium text-[var(--color-terra)]">{order.order_code}</span>
@@ -511,7 +244,7 @@ function OrdersTableContent() {
             <div
               key={order.id}
               className="bg-white rounded-2xl p-4 border border-[var(--color-border-warm)] transition-all duration-200 card-hover animate-fade-in-up"
-              style={{ animationDelay: `${i * 0.05}s` }}
+              style={{ animationDelay: `${getStaggerDelay(i)}s` }}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -575,14 +308,6 @@ function OrdersTableContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-function Package({ size, className }: { size: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <path d="M16.5 9.4 7.55 4.24" /><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" x2="12" y1="22.08" y2="12" />
-    </svg>
   );
 }
 
