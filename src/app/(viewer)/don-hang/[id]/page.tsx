@@ -8,12 +8,12 @@ import { useOrders } from '@/lib/hooks/useOrders';
 import { OrderStatus } from '@/lib/types';
 import InlineStatusSelect from '@/components/orders/InlineStatusSelect';
 import PhoneDisplay from '@/components/orders/PhoneDisplay';
-import { formatDate, isOverdue, getDueDateLabel } from '@/lib/utils/date';
+import { formatDate } from '@/lib/utils/date';
 import { formatPrice, getStatusLabel } from '@/lib/utils/order-code';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  ArrowLeft, Pencil, AlertTriangle, Camera, Image as ImageIcon, Clock, X
+  ArrowLeft, Pencil, Camera, Image as ImageIcon, Clock, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -101,8 +101,6 @@ export default function OrderDetailPage() {
     );
   }
 
-  const overdue = isOverdue(order.due_date, order.status);
-
   return (
     <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
       {/* Top bar */}
@@ -129,14 +127,6 @@ export default function OrderDetailPage() {
           )}
         </div>
       </div>
-
-      {/* Overdue banner */}
-      {overdue && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 mb-4 text-sm animate-fade-in">
-          <AlertTriangle size={16} />
-          <span className="font-medium">Đơn hàng đã trễ hạn! {getDueDateLabel(order.due_date, order.status)}</span>
-        </div>
-      )}
 
       {/* Order info card */}
       <div className="bg-white rounded-2xl border border-[var(--color-border-warm)] shadow-sm overflow-hidden mb-4 sm:mb-6 animate-fade-in-up">
