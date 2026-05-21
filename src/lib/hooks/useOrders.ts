@@ -9,7 +9,7 @@ import { getOrdersWithCustomer } from '@/lib/mock-data';
  * Fallback: nếu API lỗi → dùng mock-data client-side.
  */
 export function useOrders(role: 'admin' | 'viewer') {
-  const [orders, setOrders] = useState<OrderWithCustomer[]>(() => getOrdersWithCustomer(role));
+  const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ export function useOrders(role: 'admin' | 'viewer') {
       }
     } catch {
       setError('Không thể kết nối Supabase, đang dùng dữ liệu mẫu');
-      // Giữ nguyên mock-data đã set ở useState initializer
+      setOrders(getOrdersWithCustomer(role));
     } finally {
       setLoading(false);
     }
