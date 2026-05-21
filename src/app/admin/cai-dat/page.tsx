@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,74 @@ export default function SettingsPage() {
   const [newEmail, setNewEmail] = useState('');
   const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/example');
   const [testing, setTesting] = useState(false);
+
+  // Staff states
+  const [staffList, setStaffList] = useState<{ id: string, name: string, avatar_color: string }[]>([]);
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffColor, setNewStaffColor] = useState('#94A3B8');
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [addingStaff, setAddingStaff] = useState(false);
+
+  // Fetch staff
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const res = await fetch('/api/staff');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setStaffList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      } finally {
+        setLoadingStaff(false);
+      }
+    }
+    fetchStaff();
+  }, []);
+
+  const handleAddStaff = async () => {
+    if (!newStaffName.trim()) {
+      toast.error('Vui lòng nhập tên nghệ nhân');
+      return;
+    }
+    setAddingStaff(true);
+    try {
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newStaffName, avatar_color: newStaffColor })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Lỗi thêm nghệ nhân');
+      }
+      const newStaff = await res.json();
+      setStaffList([newStaff, ...staffList]);
+      setNewStaffName('');
+      toast.success('Đã thêm nghệ nhân mới');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAddingStaff(false);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa nghệ nhân này?')) return;
+    const toastId = toast.loading('Đang xóa...');
+    try {
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Lỗi xóa nghệ nhân');
+      }
+      setStaffList(staffList.filter(s => s.id !== id));
+      toast.success('Đã xóa nghệ nhân', { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
 
   const handleChangePin = () => {
     if (!currentPin) {
@@ -205,6 +273,67 @@ export default function SettingsPage() {
               )}
               {testing ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
             </Button>
+          </div>
+        </div>
+
+        {/* Section 4: Staff Management */}
+        <div className="bg-white rounded-2xl border border-[var(--color-border-warm)] shadow-sm overflow-hidden animate-fade-in-up stagger-3">
+          <div className="px-6 py-4 border-b border-[var(--color-border-warm)]/50 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Users size={16} className="text-blue-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-[var(--color-text-primary)]">Quản lý Nghệ nhân</h2>
+              <p className="text-xs text-muted-foreground">Thêm, sửa, xóa danh sách nghệ nhân hệ thống</p>
+            </div>
+          </div>
+          <div className="p-6 space-y-4">
+            {loadingStaff ? (
+              <div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div>
+            ) : (
+              <div className="space-y-3">
+                {staffList.map(staff => (
+                  <div key={staff.id} className="flex items-center justify-between bg-[var(--color-cream)] rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="w-3 h-3 rounded-full" style={{ background: staff.avatar_color }} />
+                      <span className="text-sm font-medium">{staff.name}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 rounded-lg text-red-500 hover:bg-red-50"
+                      onClick={() => handleDeleteStaff(staff.id)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                ))}
+                {staffList.length === 0 && <p className="text-sm text-muted-foreground italic">Chưa có nghệ nhân nào.</p>}
+              </div>
+            )}
+            <div className="flex gap-2 pt-2 border-t border-[var(--color-border-warm)]/50 mt-2">
+              <Input
+                value={newStaffName}
+                onChange={e => setNewStaffName(e.target.value)}
+                placeholder="Tên nghệ nhân..."
+                className="rounded-xl border-[var(--color-border-warm)]"
+              />
+              <Input
+                type="color"
+                value={newStaffColor}
+                onChange={e => setNewStaffColor(e.target.value)}
+                className="w-12 h-10 p-1 rounded-xl border-[var(--color-border-warm)] shrink-0 cursor-pointer"
+              />
+              <Button
+                variant="outline"
+                className="rounded-xl border-[var(--color-border-warm)] shrink-0 bg-white"
+                onClick={handleAddStaff}
+                disabled={addingStaff}
+              >
+                {addingStaff ? <RefreshCw size={14} className="mr-1 animate-spin" /> : <Plus size={14} className="mr-1" />}
+                Thêm
+              </Button>
+            </div>
           </div>
         </div>
       </div>

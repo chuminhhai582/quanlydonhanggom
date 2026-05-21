@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
 /**
@@ -30,6 +30,49 @@ export async function GET() {
     console.error('API /staff error:', err);
     return NextResponse.json(
       { error: err.message || 'Lỗi lấy dữ liệu nghệ nhân' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/staff
+ * Thêm nghệ nhân mới
+ */
+export async function POST(req: NextRequest) {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      return NextResponse.json({ error: 'Supabase URL is not configured' }, { status: 500 });
+    }
+
+    const body = await req.json();
+    const { name, avatar_color } = body;
+
+    if (!name || name.trim() === '') {
+      return NextResponse.json({ error: 'Tên nghệ nhân không được để trống' }, { status: 400 });
+    }
+
+    const supabase = await createAdminClient();
+    const { data, error } = await supabase
+      .from('staff_names')
+      .insert({
+        name: name.trim(),
+        avatar_color: avatar_color || '#94A3B8',
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Staff insert error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data);
+  } catch (err: any) {
+    console.error('API POST /staff error:', err);
+    return NextResponse.json(
+      { error: err.message || 'Lỗi thêm nghệ nhân' },
       { status: 500 }
     );
   }
