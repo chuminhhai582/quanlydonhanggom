@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ImagePlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import imageCompression from 'browser-image-compression';
@@ -80,6 +81,10 @@ export default function InlineImageCell({ images, orderId, canUpload, onUpdate }
 
   const removeImg = useCallback(async (e: React.MouseEvent, idx: number) => {
     e.stopPropagation(); // Ngăn sự kiện click lan truyền ra ngoài
+    if (!window.confirm('Bạn có chắc chắn muốn xóa ảnh mẫu này?')) {
+      return;
+    }
+
     const newImgs = imgs.filter((_, i) => i !== idx);
     const toastId = toast.loading('Đang xóa ảnh...');
     try {
@@ -146,13 +151,13 @@ export default function InlineImageCell({ images, orderId, canUpload, onUpdate }
       </div>
 
       {/* Fullscreen Image Viewer Modal */}
-      {viewingImage && (
+      {viewingImage && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
           onClick={() => setViewingImage(null)}
         >
           <button 
-            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-all"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all"
             onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
           >
             <X size={24} />
@@ -160,10 +165,11 @@ export default function InlineImageCell({ images, orderId, canUpload, onUpdate }
           <img 
             src={viewingImage} 
             alt="Ảnh xem to" 
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+            className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()} 
           />
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

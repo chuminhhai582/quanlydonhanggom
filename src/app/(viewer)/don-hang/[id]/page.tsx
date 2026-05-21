@@ -135,6 +135,10 @@ export default function OrderDetailPage() {
       return;
     }
 
+    if (!window.confirm('Bạn có chắc chắn muốn xóa ảnh tiến độ này?')) {
+      return;
+    }
+
     const toastId = toast.loading('Đang xóa ảnh...');
     try {
       const res = await fetch(`/api/orders/${order?.id}/updates/images/${id}`, {
