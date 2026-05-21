@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Mảng images không hợp lệ' }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
 
     const { data, error } = await supabase
       .from('orders')

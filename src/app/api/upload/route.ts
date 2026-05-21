@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
 
     // Ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets();
