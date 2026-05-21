@@ -11,7 +11,6 @@ import StatusBadge from '@/components/orders/StatusBadge';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useOrders } from '@/lib/hooks/useOrders';
 import { OrderWithCustomer, CalendarEvent, OrderStatus } from '@/lib/types';
-import { isOverdue } from '@/lib/utils/date';
 import { getStatusColor } from '@/lib/utils/order-code';
 import { formatShortDate, formatRelativeTime } from '@/lib/utils/date';
 import { useOrderCounts } from '@/lib/hooks/useOrderCounts';
@@ -24,7 +23,7 @@ import {
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ExternalLink, Clock, User, Package, AlertTriangle } from 'lucide-react';
+import { ExternalLink, Clock, User, Package } from 'lucide-react';
 
 const locales = { 'vi': vi };
 const localizer = dateFnsLocalizer({
@@ -60,10 +59,20 @@ function DashboardContent() {
       start: order.start_date ? parseISO(order.start_date) : parseISO(order.created_at),
       end: order.start_date ? parseISO(order.start_date) : parseISO(order.created_at),
       status: order.status,
-      isOverdue: isOverdue(order.due_date, order.status),
+      isOverdue: false,
       order,
     }));
   }, [filteredOrders]);
+
+  // Custom event component — hiển thị 2 dòng: khách hàng + sản phẩm
+  const EventComponent = useCallback(({ event }: { event: CalendarEvent }) => {
+    return (
+      <div className="calendar-event-content">
+        <div className="calendar-event-customer">{event.order.customer_name}</div>
+        <div className="calendar-event-product">{event.order.product_name}</div>
+      </div>
+    );
+  }, []);
 
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
     setSelectedOrder(event.order);
@@ -80,10 +89,9 @@ function DashboardContent() {
         borderRadius: '6px',
         fontSize: '11px',
         fontWeight: 600,
-        padding: '2px 6px',
-        ...(event.isOverdue ? {
-          boxShadow: `0 0 0 2px #DC2626`,
-        } : {}),
+        padding: '1px 5px',
+        lineHeight: '1.3',
+        overflow: 'visible' as const,
       },
     };
   }, []);
@@ -156,6 +164,9 @@ function DashboardContent() {
             eventPropGetter={eventStyleGetter}
             dayPropGetter={dayPropGetter}
             messages={messages}
+            components={{
+              event: EventComponent,
+            }}
             popup
             selectable={false}
           />
@@ -177,13 +188,6 @@ function DashboardContent() {
               </SheetHeader>
 
               <div className="mt-6 space-y-5">
-                {/* Overdue warning */}
-                {isOverdue(selectedOrder.due_date, selectedOrder.status) && (
-                  <div className="flex items-center gap-2 bg-red-50 text-red-700 rounded-xl p-3 text-sm">
-                    <AlertTriangle size={16} />
-                    <span className="font-medium">Đơn hàng đã trễ hạn!</span>
-                  </div>
-                )}
 
                 {/* Customer info */}
                 <div className="bg-[var(--color-cream)] rounded-xl p-4 space-y-2.5">
