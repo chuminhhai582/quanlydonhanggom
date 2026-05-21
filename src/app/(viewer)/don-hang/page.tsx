@@ -264,10 +264,15 @@ function OrdersTableContent() {
               </div>
 
               {/* Card body */}
-              <div className="p-4 space-y-2.5">
-                <div>
-                  <p className="font-semibold text-sm">{order.customer_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{order.product_name} x{order.quantity}</p>
+              <div className="px-4 py-3 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{order.customer_name}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{order.product_name} x{order.quantity}</p>
+                  </div>
+                  {(order.reference_images?.length > 0 || role === 'admin') && (
+                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -294,11 +299,6 @@ function OrdersTableContent() {
                   </div>
                 </div>
 
-                {(order.reference_images.length > 0 || role === 'admin') && (
-                  <div className="pt-2 border-t border-[var(--color-border-warm)]/50">
-                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
-                  </div>
-                )}
               </div>
             </div>
           ))}
@@ -344,7 +344,9 @@ function OrdersTableContent() {
                     <p className="font-semibold text-[13px] truncate">{order.customer_name}</p>
                     <p className="text-xs text-muted-foreground truncate">{order.product_name} x{order.quantity}</p>
                   </div>
-                  <PhoneDisplay phone={order.customer_phone} />
+                  {(order.reference_images?.length > 0 || role === 'admin') && (
+                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+                  )}
                 </div>
 
                 {/* Meta row */}
@@ -377,12 +379,6 @@ function OrdersTableContent() {
                   )}
                 </div>
 
-                {/* Ảnh minh họa */}
-                {(order.reference_images.length > 0 || role === 'admin') && (
-                  <div className="pt-2 border-t border-[var(--color-border-warm)]/30">
-                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
-                  </div>
-                )}
               </div>
             </div>
           ))}
