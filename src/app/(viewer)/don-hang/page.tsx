@@ -319,9 +319,9 @@ function OrdersTableContent() {
               className="bg-white rounded-2xl border border-[var(--color-border-warm)] overflow-hidden transition-all duration-200 active:scale-[0.99] animate-fade-in-up"
               style={{ animationDelay: `${getStaggerDelay(i)}s` }}
             >
-              {/* Top: code + status + arrow */}
-              <Link href={`/don-hang/${order.id}`} className="flex items-center justify-between px-3.5 py-2.5 bg-[var(--color-cream)]/20 border-b border-[var(--color-border-warm)]/30">
-                <div className="flex items-center gap-2 min-w-0" onClick={e => e.stopPropagation()}>
+              {/* Top: code + status + arrow — status NGOÀI Link để tránh navigate */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 bg-[var(--color-cream)]/20 border-b border-[var(--color-border-warm)]/30">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="font-mono text-[11px] text-[var(--color-terra)] font-medium shrink-0">{order.order_code}</span>
                   <InlineStatusSelect
                     value={order.status}
@@ -331,8 +331,10 @@ function OrdersTableContent() {
                     onToggle={() => toggleDropdown(`m-status-${order.id}`)}
                   />
                 </div>
-                <ChevronRight size={16} className="text-muted-foreground shrink-0 ml-2" />
-              </Link>
+                <Link href={`/don-hang/${order.id}`} className="p-1.5 -mr-1.5 rounded-lg hover:bg-[var(--color-cream)] transition-colors">
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </Link>
+              </div>
 
               {/* Body */}
               <div className="px-3.5 py-3 space-y-2">

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/auth-context';
 import { getOrdersWithCustomer, mockOrderUpdates } from '@/lib/mock-data';
 import { OrderUpdate, OrderStatus } from '@/lib/types';
 import StatusBadge from '@/components/orders/StatusBadge';
+import InlineStatusSelect from '@/components/orders/InlineStatusSelect';
 import PhoneDisplay from '@/components/orders/PhoneDisplay';
 import { formatDate, formatRelativeTime, isOverdue, getDueDateLabel } from '@/lib/utils/date';
 import { formatPrice, getStatusColor, getStatusLabel } from '@/lib/utils/order-code';
@@ -38,11 +39,21 @@ export default function OrderDetailPage() {
   const [updateNote, setUpdateNote] = useState('');
   const [statusAfter, setStatusAfter] = useState<OrderStatus>('crafting');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
+  const allOrders = useMemo(() => getOrdersWithCustomer(role || 'viewer'), [role]);
+  const [ordersState, setOrdersState] = useState(allOrders);
 
   const order = useMemo(() => {
-    const orders = getOrdersWithCustomer(role || 'viewer');
-    return orders.find(o => o.id === params.id);
-  }, [params.id, role]);
+    return ordersState.find(o => o.id === params.id);
+  }, [params.id, ordersState]);
+
+  const handleStatusChange = useCallback((orderId: string, newStatus: OrderStatus) => {
+    setOrdersState(prev =>
+      prev.map(o => o.id === orderId ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o)
+    );
+    toast.success(`Đã cập nhật tiến độ: ${getStatusLabel(newStatus)}`);
+  }, []);
 
   const updates = useMemo(() => {
     return mockOrderUpdates
@@ -192,7 +203,13 @@ export default function OrderDetailPage() {
           Quay lại
         </Link>
         <div className="flex items-center gap-3">
-          <StatusBadge status={order.status} size="lg" />
+          <InlineStatusSelect
+            value={order.status}
+            orderId={order.id}
+            onUpdate={handleStatusChange}
+            isOpen={statusDropdownOpen}
+            onToggle={() => setStatusDropdownOpen(prev => !prev)}
+          />
           {role === 'admin' && (
             <Link href={`/admin/don-hang/${order.id}/sua`}>
               <Button variant="outline" size="sm" className="rounded-xl border-[var(--color-border-warm)]">
