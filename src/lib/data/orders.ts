@@ -20,12 +20,12 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
       .from('orders')
       .select(`
         *,
-        customers!inner (name, phone, email, address),
+        customers (name, phone, email, address),
         order_assignments (
           staff_names (id, name, avatar_color, is_active)
         ),
         order_updates (
-          id, order_id, status, created_at, updated_by, note
+          id, order_id, milestone_name, note, status_after, created_by_name, created_at
         )
       `)
       .order('created_at', { ascending: false })

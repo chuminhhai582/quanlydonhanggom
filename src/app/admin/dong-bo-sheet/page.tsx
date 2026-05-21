@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { mockSyncFieldConfig, mockSyncLogs } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
 import { SyncFieldConfig, SyncLog, SyncDirection } from '@/lib/types';
 import { formatDateTime, formatRelativeTime } from '@/lib/utils/date';
 import { Button } from '@/components/ui/button';
@@ -23,8 +22,9 @@ import {
 import { toast } from 'sonner';
 
 export default function SheetSyncPage() {
-  const [fieldConfigs, setFieldConfigs] = useState<SyncFieldConfig[]>(mockSyncFieldConfig);
-  const [syncLogs] = useState<SyncLog[]>(mockSyncLogs);
+  const [fieldConfigs, setFieldConfigs] = useState<SyncFieldConfig[]>([]);
+  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
+  const [loadingConfig, setLoadingConfig] = useState(true);
   const [syncDirection, setSyncDirection] = useState<SyncDirection>('app_to_sheet');
   const [dateRange, setDateRange] = useState<'all' | '30days' | 'custom'>('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -34,6 +34,30 @@ export default function SheetSyncPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState('config');
+
+  // Fetch cấu hình và lịch sử đồng bộ từ Supabase
+  useEffect(() => {
+    async function fetchSyncData() {
+      try {
+        setLoadingConfig(true);
+        const res = await fetch('/api/sync-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.fieldConfigs) && data.fieldConfigs.length > 0) {
+            setFieldConfigs(data.fieldConfigs);
+          }
+          if (Array.isArray(data.syncLogs)) {
+            setSyncLogs(data.syncLogs);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching sync config:', err);
+      } finally {
+        setLoadingConfig(false);
+      }
+    }
+    fetchSyncData();
+  }, []);
 
   const groups = [
     { key: 'orders', label: 'Đơn hàng', icon: '📦' },

@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useClickOutside } from '@/lib/hooks/useClickOutside';
-import { mockStaffNames } from '@/lib/mock-data';
+import { StaffName } from '@/lib/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ChevronDown, Check } from 'lucide-react';
 
@@ -22,6 +22,23 @@ export default function InlineStaffSelect({
   const menuRef = useRef<HTMLDivElement>(null);
   const selectedId = currentStaff[0]?.id || '';
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [staffList, setStaffList] = useState<StaffName[]>([]);
+
+  // Fetch staff từ Supabase
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const res = await fetch('/api/staff');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setStaffList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      }
+    }
+    fetchStaff();
+  }, []);
 
   useClickOutside([triggerRef, menuRef], isOpen, onToggle);
 
@@ -81,7 +98,7 @@ export default function InlineStaffSelect({
             boxShadow: '0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08)',
           }}
         >
-          {mockStaffNames.map(staff => (
+          {staffList.map(staff => (
             <button
               key={staff.id}
               role="option"

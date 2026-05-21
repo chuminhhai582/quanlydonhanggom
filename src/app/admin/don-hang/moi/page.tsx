@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { mockCustomers, mockProducts, mockStaffNames } from '@/lib/mock-data';
+import { Customer, Product, StaffName } from '@/lib/types';
+import { createOrder } from '@/actions/order';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Save, Plus, Calendar, User, Package } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Calendar, User, Package, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -29,6 +30,45 @@ export default function CreateOrderPage() {
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Data từ Supabase
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [staffNames, setStaffNames] = useState<StaffName[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Fetch customers, products, staff từ Supabase
+  useEffect(() => {
+    async function fetchData() {
+      setLoadingData(true);
+      try {
+        const [cusRes, prodRes, staffRes] = await Promise.all([
+          fetch('/api/customers'),
+          fetch('/api/products'),
+          fetch('/api/staff'),
+        ]);
+
+        if (cusRes.ok) {
+          const cusData = await cusRes.json();
+          if (Array.isArray(cusData)) setCustomers(cusData);
+        }
+        if (prodRes.ok) {
+          const prodData = await prodRes.json();
+          if (Array.isArray(prodData)) setProducts(prodData);
+        }
+        if (staffRes.ok) {
+          const staffData = await staffRes.json();
+          if (Array.isArray(staffData)) setStaffNames(staffData);
+        }
+      } catch (err) {
+        console.error('Error fetching form data:', err);
+        toast.error('Không thể tải dữ liệu. Vui lòng thử lại.');
+      } finally {
+        setLoadingData(false);
+      }
+    }
+    fetchData();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customer_id) {
@@ -41,10 +81,46 @@ export default function CreateOrderPage() {
     }
 
     setSaving(true);
-    await new Promise(r => setTimeout(r, 800));
-    toast.success('Đã tạo đơn hàng mới!');
-    setSaving(false);
-    router.push('/don-hang');
+    try {
+      const orderPayload = {
+        customer_id: formData.customer_id,
+        product_name: formData.product_name || 'Chưa đặt tên',
+        product_id: formData.product_id || null,
+        quantity: formData.quantity,
+        custom_requirements: formData.custom_requirements || null,
+        due_date: formData.due_date,
+        start_date: formData.start_date || null,
+        price: formData.price ? parseFloat(formData.price) : null,
+        deposit: formData.deposit ? parseFloat(formData.deposit) : null,
+        internal_note: formData.internal_note || null,
+        status: 'not_started' as const,
+      };
+
+      const result = await createOrder(orderPayload);
+
+      // Tạo order_assignments cho staff đã chọn
+      if (result.data?.id && selectedStaff.length > 0) {
+        const assignRes = await fetch('/api/orders/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: result.data.id,
+            staff_ids: selectedStaff,
+          }),
+        });
+        if (!assignRes.ok) {
+          console.warn('Không thể gán nhân viên, nhưng đơn hàng đã tạo thành công.');
+        }
+      }
+
+      toast.success('Đã tạo đơn hàng mới!');
+      router.push('/don-hang');
+    } catch (err: any) {
+      console.error('Create order error:', err);
+      toast.error(err.message || 'Lỗi khi tạo đơn hàng');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -73,10 +149,11 @@ export default function CreateOrderPage() {
             <select
               value={formData.customer_id}
               onChange={e => setFormData(p => ({ ...p, customer_id: e.target.value }))}
-              className="w-full h-10 rounded-xl border border-[var(--color-border-warm)] px-3 text-sm bg-white focus:outline-none focus:border-[var(--color-ember)] focus:ring-2 focus:ring-[var(--color-ember)]/20"
+              disabled={loadingData}
+              className="w-full h-10 rounded-xl border border-[var(--color-border-warm)] px-3 text-sm bg-white focus:outline-none focus:border-[var(--color-ember)] focus:ring-2 focus:ring-[var(--color-ember)]/20 disabled:opacity-50"
             >
-              <option value="">Chọn khách hàng...</option>
-              {mockCustomers.map(c => (
+              <option value="">{loadingData ? 'Đang tải...' : 'Chọn khách hàng...'}</option>
+              {customers.map(c => (
                 <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>
               ))}
             </select>
@@ -92,7 +169,7 @@ export default function CreateOrderPage() {
               <select
                 value={formData.product_id}
                 onChange={e => {
-                  const prod = mockProducts.find(p => p.id === e.target.value);
+                  const prod = products.find(p => p.id === e.target.value);
                   setFormData(p => ({
                     ...p,
                     product_id: e.target.value,
@@ -100,10 +177,11 @@ export default function CreateOrderPage() {
                     price: prod?.reference_price?.toString() || p.price,
                   }));
                 }}
-                className="w-full h-10 rounded-xl border border-[var(--color-border-warm)] px-3 text-sm bg-white focus:outline-none focus:border-[var(--color-ember)]"
+                disabled={loadingData}
+                className="w-full h-10 rounded-xl border border-[var(--color-border-warm)] px-3 text-sm bg-white focus:outline-none focus:border-[var(--color-ember)] disabled:opacity-50"
               >
-                <option value="">Chọn từ catalog...</option>
-                {mockProducts.filter(p => p.is_active).map(p => (
+                <option value="">{loadingData ? 'Đang tải...' : 'Chọn từ catalog...'}</option>
+                {products.filter(p => p.is_active).map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
@@ -184,33 +262,43 @@ export default function CreateOrderPage() {
           {/* Staff */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Nhân viên phụ trách</Label>
-            <div className="flex flex-wrap gap-2">
-              {mockStaffNames.filter(s => s.is_active).map(staff => (
-                <label
-                  key={staff.id}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all
-                    ${selectedStaff.includes(staff.id)
-                      ? 'border-[var(--color-ember)] bg-[var(--color-ember)]/5'
-                      : 'border-[var(--color-border-warm)] hover:border-gray-300'}
-                  `}
-                >
-                  <Checkbox
-                    checked={selectedStaff.includes(staff.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedStaff(prev => [...prev, staff.id]);
-                      } else {
-                        setSelectedStaff(prev => prev.filter(id => id !== staff.id));
-                      }
-                    }}
-                    className="sr-only"
-                  />
-                  <span className="w-3 h-3 rounded-full" style={{ background: staff.avatar_color }} />
-                  <span className="text-sm">{staff.name}</span>
-                </label>
-              ))}
-            </div>
+            {loadingData ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 size={14} className="animate-spin" />
+                Đang tải danh sách nhân viên...
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {staffNames.filter(s => s.is_active).map(staff => (
+                  <label
+                    key={staff.id}
+                    className={`
+                      flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all
+                      ${selectedStaff.includes(staff.id)
+                        ? 'border-[var(--color-ember)] bg-[var(--color-ember)]/5'
+                        : 'border-[var(--color-border-warm)] hover:border-gray-300'}
+                    `}
+                  >
+                    <Checkbox
+                      checked={selectedStaff.includes(staff.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedStaff(prev => [...prev, staff.id]);
+                        } else {
+                          setSelectedStaff(prev => prev.filter(id => id !== staff.id));
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <span className="w-3 h-3 rounded-full" style={{ background: staff.avatar_color }} />
+                    <span className="text-sm">{staff.name}</span>
+                  </label>
+                ))}
+                {staffNames.filter(s => s.is_active).length === 0 && (
+                  <p className="text-sm text-muted-foreground">Chưa có nhân viên nào</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Requirements */}
@@ -242,11 +330,14 @@ export default function CreateOrderPage() {
             </Button>
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || loadingData}
               className="flex-1 h-11 rounded-xl bg-gradient-to-r from-[var(--color-terra)] to-[var(--color-ember)] shadow-md"
             >
-              <Save size={16} className="mr-1.5" />
-              {saving ? 'Đang lưu...' : 'Tạo đơn hàng'}
+              {saving ? (
+                <><Loader2 size={16} className="mr-1.5 animate-spin" />Đang lưu...</>
+              ) : (
+                <><Save size={16} className="mr-1.5" />Tạo đơn hàng</>
+              )}
             </Button>
           </div>
         </form>

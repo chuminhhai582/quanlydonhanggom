@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import StatusTabs from '@/components/orders/StatusTabs';
 import OrderSkeleton from '@/components/orders/OrderSkeleton';
 import { useAuth } from '@/lib/auth/auth-context';
-import { mockStaffNames } from '@/lib/mock-data';
+import { StaffName } from '@/lib/types';
 import OrderTableRow from '@/components/orders/OrderTableRow';
 import OrderCardMobile from '@/components/orders/OrderCardMobile';
 import { useOrders } from '@/lib/hooks/useOrders';
@@ -38,6 +38,23 @@ function OrdersTableContent() {
   }, []);
   const closeAllDropdowns = useCallback(() => setActiveDropdown(null), []);
 
+  // Fetch staff từ Supabase
+  const [staffList, setStaffList] = useState<StaffName[]>([]);
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const res = await fetch('/api/staff');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setStaffList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      }
+    }
+    fetchStaff();
+  }, []);
+
   // Dữ liệu — fetch từ Supabase
   const { orders: ordersState, setOrders: setOrdersState, loading } = useOrders(role || 'viewer');
   const counts = useOrderCounts(ordersState);
@@ -65,13 +82,13 @@ function OrdersTableContent() {
   }, []);
 
   const handleStaffUpdate = useCallback((orderId: string, staffId: string) => {
-    const staff = mockStaffNames.find(s => s.id === staffId);
+    const staff = staffList.find(s => s.id === staffId);
     if (!staff) return;
     setOrdersState(prev =>
       prev.map(o => o.id === orderId ? { ...o, assigned_staff: [staff], updated_at: new Date().toISOString() } : o)
     );
     toast.success(`Đã chọn nghệ nhân: ${staff.name}`);
-  }, []);
+  }, [staffList]);
 
   const handleDateUpdate = useCallback((orderId: string, date: string) => {
     setOrdersState(prev =>

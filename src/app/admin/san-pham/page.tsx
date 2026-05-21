@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { mockProducts } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { Product } from '@/lib/types';
 import { formatPrice } from '@/lib/utils/order-code';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,13 +11,34 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from '@/components/ui/dialog';
-import { Plus, Search, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProductsPage() {
-  const [products] = useState(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Fetch sản phẩm từ Supabase
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setProducts(data);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        toast.error('Không thể tải danh sách sản phẩm');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -28,7 +49,7 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between mb-6 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-terra)]">Catalog sản phẩm</h1>
-          <p className="text-sm text-muted-foreground mt-1">{products.length} sản phẩm mẫu</p>
+          <p className="text-sm text-muted-foreground mt-1">{loading ? 'Đang tải...' : `${products.length} sản phẩm mẫu`}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
@@ -77,45 +98,58 @@ export default function ProductsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((product, i) => (
-          <div
-            key={product.id}
-            className="bg-white rounded-2xl border border-[var(--color-border-warm)] overflow-hidden card-hover animate-fade-in-up"
-            style={{ animationDelay: `${i * 0.05}s` }}
-          >
-            <div className="h-32 bg-gradient-to-br from-[var(--color-cream)] to-[var(--color-cream-dark)] flex items-center justify-center text-4xl">
-              🏺
-            </div>
-            <div className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm">{product.name}</h3>
-                  {product.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
-                  )}
-                </div>
-                <Badge variant={product.is_active ? 'default' : 'secondary'} className={`text-[10px] shrink-0 ml-2 rounded-full ${product.is_active ? 'bg-[var(--color-status-completed)]' : ''}`}>
-                  {product.is_active ? 'Đang bán' : 'Ẩn'}
-                </Badge>
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 size={24} className="animate-spin mr-2" />
+          Đang tải danh sách sản phẩm...
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((product, i) => (
+            <div
+              key={product.id}
+              className="bg-white rounded-2xl border border-[var(--color-border-warm)] overflow-hidden card-hover animate-fade-in-up"
+              style={{ animationDelay: `${i * 0.05}s` }}
+            >
+              <div className="h-32 bg-gradient-to-br from-[var(--color-cream)] to-[var(--color-cream-dark)] flex items-center justify-center text-4xl">
+                🏺
               </div>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border-warm)]/50">
-                <span className="font-bold text-sm text-[var(--color-ember)]">
-                  {formatPrice(product.reference_price)}
-                </span>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg">
-                    <Pencil size={12} />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-red-500 hover:bg-red-50">
-                    <Trash2 size={12} />
-                  </Button>
+              <div className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sm">{product.name}</h3>
+                    {product.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
+                    )}
+                  </div>
+                  <Badge variant={product.is_active ? 'default' : 'secondary'} className={`text-[10px] shrink-0 ml-2 rounded-full ${product.is_active ? 'bg-[var(--color-status-completed)]' : ''}`}>
+                    {product.is_active ? 'Đang bán' : 'Ẩn'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border-warm)]/50">
+                  <span className="font-bold text-sm text-[var(--color-ember)]">
+                    {formatPrice(product.reference_price)}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg">
+                      <Pencil size={12} />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-red-500 hover:bg-red-50">
+                      <Trash2 size={12} />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+          {filtered.length === 0 && !loading && (
+            <div className="col-span-full text-center py-12 text-muted-foreground">
+              <Package size={40} className="mx-auto mb-3 opacity-30" />
+              <p className="font-medium">Không tìm thấy sản phẩm</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
