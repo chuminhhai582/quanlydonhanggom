@@ -131,7 +131,7 @@ CREATE TABLE order_updates (
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   milestone_name TEXT NOT NULL,
   note TEXT,
-  status_after order_status NOT NULL DEFAULT 'in_progress',
+  status_after order_status NOT NULL DEFAULT 'crafting',
   created_by_type update_creator_type NOT NULL,
   created_by_admin_id UUID REFERENCES auth.users(id),
   created_by_name TEXT,
