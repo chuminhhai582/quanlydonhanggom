@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/auth-context';
 import { createClient } from '@/lib/supabase/client';
@@ -18,6 +18,22 @@ export default function AdminLoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
   const { setRole } = useAuth();
+
+  useEffect(() => {
+    // Check URL parameters for errors
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('error');
+      if (err === 'unauthorized_email') {
+        setError('Email này không được phép truy cập trang quản trị.');
+        // Remove error from URL without refreshing
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (err === 'auth_failed') {
+        setError('Đăng nhập thất bại. Vui lòng thử lại.');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
 
   // Đăng nhập bằng Email + Password (Supabase Auth)
   const handleSubmit = async (e: React.FormEvent) => {

@@ -16,6 +16,19 @@ export async function GET(req: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // Check allowed emails if configured
+      const allowedEmailsStr = process.env.ALLOWED_ADMIN_EMAILS;
+      if (allowedEmailsStr) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.email) {
+          const allowedEmails = allowedEmailsStr.split(',').map(e => e.trim().toLowerCase());
+          if (!allowedEmails.includes(user.email.toLowerCase())) {
+            // Email not allowed -> sign out immediately
+            await supabase.auth.signOut();
+            return NextResponse.redirect(`${origin}/admin/dang-nhap?error=unauthorized_email`);
+          }
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
