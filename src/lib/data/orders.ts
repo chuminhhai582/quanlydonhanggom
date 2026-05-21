@@ -1,11 +1,12 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { OrderWithCustomer, OrderStatus } from '@/lib/types';
 
 /**
- * Lấy danh sách đơn hàng từ Supabase (thay thế getOrdersWithCustomer mock).
- * Nếu Supabase chưa kết nối → fallback về mock-data.
+ * Lấy danh sách đơn hàng từ Supabase.
+ * Dùng adminClient (service role) để bypass RLS vì viewer auth
+ * dựa trên PIN (không có Supabase session).
  */
 export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCustomer[]> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -13,7 +14,7 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
 
     // Query đơn hàng kèm customer + staff
     const { data: orders, error } = await supabase
@@ -89,7 +90,7 @@ export async function uploadProgressImage(
     return null; // Không upload khi chưa cấu hình
   }
 
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const fileName = `${orderId}/${Date.now()}-${file.name}`;
 
   const { data, error } = await supabase.storage

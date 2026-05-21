@@ -1,11 +1,11 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { Order, OrderStatus } from '@/lib/types';
 
 export async function createOrder(orderData: Partial<Order>) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { data, error } = await supabase
     .from('orders')
@@ -27,7 +27,7 @@ export async function createOrder(orderData: Partial<Order>) {
 }
 
 export async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { data, error } = await supabase
     .from('orders')
@@ -51,7 +51,7 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
 }
 
 export async function updateOrder(orderId: string, orderData: Partial<Order>) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // Loại bỏ các trường không được phép update trực tiếp nếu cần thiết
   const { id, created_at, ...updateData } = orderData as any;
@@ -78,7 +78,7 @@ export async function updateOrder(orderId: string, orderData: Partial<Order>) {
 }
 
 export async function deleteOrder(orderId: string) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { error } = await supabase
     .from('orders')

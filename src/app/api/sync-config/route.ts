@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/sync-config
@@ -14,7 +14,7 @@ export async function GET() {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
 
     // Fetch field config
     const { data: fieldConfigs, error: configErr } = await supabase

@@ -1,11 +1,11 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { Customer } from '@/lib/types';
 
 export async function createCustomer(customerData: Partial<Customer>) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { data, error } = await supabase
     .from('customers')
@@ -25,7 +25,7 @@ export async function createCustomer(customerData: Partial<Customer>) {
 }
 
 export async function updateCustomer(customerId: string, customerData: Partial<Customer>) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { id, created_at, ...updateData } = customerData as any;
 
