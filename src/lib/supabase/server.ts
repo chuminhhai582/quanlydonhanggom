@@ -27,3 +27,23 @@ export async function createClient() {
     }
   )
 }
+
+export async function createAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    console.warn("WARNING: SUPABASE_SERVICE_ROLE_KEY is not defined. Falling back to anon key. Data insertion might fail due to RLS.");
+  }
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {}
+      },
+    }
+  )
+}

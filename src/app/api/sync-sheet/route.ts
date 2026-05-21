@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { google } from 'googleapis';
+import { createAdminClient } from '@/lib/supabase/server';
 import {
   readSheetTab, writeSheetTab, ensureTabExists
 } from '@/lib/google-sheets';
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
 
 // ---- APP → SHEET ----
 async function syncAppToSheet() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // 1. Lấy đơn hàng từ Supabase
   const { data: orders, error: ordersErr } = await supabase
@@ -143,7 +144,7 @@ async function syncAppToSheet() {
 
 // ---- SHEET → APP ----
 async function syncSheetToApp() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   // 1. Đọc tab Đơn hàng
   const sheetData = await readSheetTab('Đơn hàng');
@@ -215,17 +216,20 @@ async function syncSheetToApp() {
       if (existingCustomer) {
         customerId = existingCustomer.id;
       } else {
-        const { data: newCustomer } = await supabase
+        const { data: newCustomer, error: insertCustomerErr } = await supabase
           .from('customers')
           .insert({ name: customerName, phone: customerPhone || null })
           .select('id')
           .single();
+        if (insertCustomerErr) {
+          console.error('Error creating customer:', insertCustomerErr, 'Name:', customerName);
+        }
         customerId = newCustomer?.id;
       }
 
       if (!customerId) { skipped++; continue; }
 
-      await supabase.from('orders').insert({
+      const { error: insertOrderErr } = await supabase.from('orders').insert({
         order_code: orderCode,
         customer_id: customerId,
         product_name: row[3]?.trim() || 'Chưa đặt tên',
