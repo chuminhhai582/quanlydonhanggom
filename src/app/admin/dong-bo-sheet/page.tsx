@@ -56,14 +56,26 @@ export default function SheetSyncPage() {
 
   const handleSync = async () => {
     setSyncing(true);
-    await new Promise(r => setTimeout(r, 2000));
-    setSyncing(false);
-    toast.success(
-      syncDirection === 'app_to_sheet'
-        ? 'Đã xuất 8 đơn hàng ra Google Sheet!'
-        : 'Đã nhập 3 đơn hàng từ Google Sheet!',
-      { description: 'Xem chi tiết trong lịch sử đồng bộ.' }
-    );
+    try {
+      const res = await fetch('/api/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction: syncDirection }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Lỗi đồng bộ');
+      } else {
+        toast.success(data.message, {
+          description: 'Xem chi tiết trong lịch sử đồng bộ.',
+        });
+      }
+    } catch (err: any) {
+      toast.error('Lỗi kết nối: ' + (err.message || 'Không thể kết nối server'));
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handlePreview = () => {
