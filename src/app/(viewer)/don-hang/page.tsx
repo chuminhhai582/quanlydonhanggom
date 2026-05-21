@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import StatusTabs from '@/components/orders/StatusTabs';
 import StatusBadge from '@/components/orders/StatusBadge';
 import PhoneDisplay from '@/components/orders/PhoneDisplay';
 import { useAuth } from '@/lib/auth/auth-context';
-import { getOrdersWithCustomer, mockStaffNames, mockOrders } from '@/lib/mock-data';
+import { getOrdersWithCustomer, mockStaffNames } from '@/lib/mock-data';
 import { OrderWithCustomer, OrderStatus } from '@/lib/types';
 import { formatShortDate, formatRelativeTime } from '@/lib/utils/date';
 import { getStatusLabel, getStatusColor } from '@/lib/utils/order-code';
@@ -24,61 +24,105 @@ const ALL_STATUSES: OrderStatus[] = [
   'not_started', 'crafting', 'drying', 'firing', 'broken', 'redoing', 'refiring'
 ];
 
+// ==========================================
+// Quản lý dropdown: chỉ 1 dropdown mở tại 1 thời điểm
+// Key format: "status-{orderId}" hoặc "staff-{orderId}"
+// ==========================================
+
 // ---------- Inline Status Dropdown ----------
-function InlineStatusSelect({ 
-  value, orderId, onUpdate 
-}: { 
-  value: OrderStatus; orderId: string; onUpdate: (id: string, status: OrderStatus) => void 
+function InlineStatusSelect({
+  value, orderId, onUpdate, isOpen, onToggle
+}: {
+  value: OrderStatus;
+  orderId: string;
+  onUpdate: (id: string, status: OrderStatus) => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) {
+        onToggle();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onToggle]);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        ref={triggerRef}
+        onClick={onToggle}
         className="flex items-center gap-1.5 group cursor-pointer"
       >
         <StatusBadge status={value} size="sm" />
         <ChevronDown size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-[var(--color-border-warm)] py-1.5 min-w-[180px] animate-fade-in-up">
-            {ALL_STATUSES.map(s => (
-              <button
-                key={s}
-                onClick={() => { onUpdate(orderId, s); setOpen(false); }}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-cream)]/60 transition-colors ${s === value ? 'bg-[var(--color-cream)]/40 font-medium' : ''}`}
-              >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getStatusColor(s) }} />
-                {getStatusLabel(s)}
-                {s === value && <Check size={14} className="ml-auto text-[var(--color-terra)]" />}
-              </button>
-            ))}
-          </div>
-        </>
+      {isOpen && (
+        <div
+          ref={menuRef}
+          className="absolute left-0 top-full mt-1 z-[100] bg-white rounded-xl shadow-xl border border-[var(--color-border-warm)] py-1.5 min-w-[180px] animate-scale-in"
+          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.12))' }}
+        >
+          {ALL_STATUSES.map(s => (
+            <button
+              key={s}
+              onClick={() => { onUpdate(orderId, s); onToggle(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--color-cream)]/60 transition-colors ${s === value ? 'bg-[var(--color-cream)]/40 font-medium' : ''}`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getStatusColor(s) }} />
+              {getStatusLabel(s)}
+              {s === value && <Check size={14} className="ml-auto text-[var(--color-terra)]" />}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
 // ---------- Inline Staff Dropdown ----------
-function InlineStaffSelect({ 
-  currentStaff, orderId, onUpdate 
-}: { 
+function InlineStaffSelect({
+  currentStaff, orderId, onUpdate, isOpen, onToggle
+}: {
   currentStaff: { id: string; name: string; avatar_color: string }[];
   orderId: string;
   onUpdate: (id: string, staffId: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const selectedId = currentStaff[0]?.id || '';
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) {
+        onToggle();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onToggle]);
 
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        ref={triggerRef}
+        onClick={onToggle}
         className="flex items-center gap-1.5 group cursor-pointer"
       >
         {currentStaff.length > 0 ? (
@@ -95,36 +139,37 @@ function InlineStaffSelect({
         )}
         <ChevronDown size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-[var(--color-border-warm)] py-1.5 min-w-[160px] animate-fade-in-up">
-            {mockStaffNames.map(staff => (
-              <button
-                key={staff.id}
-                onClick={() => { onUpdate(orderId, staff.id); setOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--color-cream)]/60 transition-colors ${staff.id === selectedId ? 'bg-[var(--color-cream)]/40 font-medium' : ''}`}
-              >
-                <Avatar className="w-6 h-6">
-                  <AvatarFallback className="text-[9px] font-bold text-white" style={{ background: staff.avatar_color }}>
-                    {staff.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                {staff.name}
-                {staff.id === selectedId && <Check size={14} className="ml-auto text-[var(--color-terra)]" />}
-              </button>
-            ))}
-          </div>
-        </>
+      {isOpen && (
+        <div
+          ref={menuRef}
+          className="absolute left-0 top-full mt-1 z-[100] bg-white rounded-xl shadow-xl border border-[var(--color-border-warm)] py-1.5 min-w-[160px] animate-scale-in"
+          style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.12))' }}
+        >
+          {mockStaffNames.map(staff => (
+            <button
+              key={staff.id}
+              onClick={() => { onUpdate(orderId, staff.id); onToggle(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--color-cream)]/60 transition-colors ${staff.id === selectedId ? 'bg-[var(--color-cream)]/40 font-medium' : ''}`}
+            >
+              <Avatar className="w-6 h-6">
+                <AvatarFallback className="text-[9px] font-bold text-white" style={{ background: staff.avatar_color }}>
+                  {staff.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              {staff.name}
+              {staff.id === selectedId && <Check size={14} className="ml-auto text-[var(--color-terra)]" />}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
 // ---------- Inline Image Cell ----------
-function InlineImageCell({ 
+function InlineImageCell({
   images, orderId, canUpload
-}: { 
+}: {
   images: string[]; orderId: string; canUpload: boolean;
 }) {
   const [imgs, setImgs] = useState<string[]>(images);
@@ -193,31 +238,35 @@ function InlineImageCell({
 }
 
 // ---------- Inline Date Cell ----------
-function InlineDateCell({ 
-  value, orderId, onUpdate 
-}: { 
-  value: string | null; orderId: string; onUpdate: (id: string, date: string) => void 
+function InlineDateCell({
+  value, orderId, onUpdate, isEditing, onStartEdit, onStopEdit
+}: {
+  value: string | null;
+  orderId: string;
+  onUpdate: (id: string, date: string) => void;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onStopEdit: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
   const display = value ? formatShortDate(value) : '—';
 
-  if (editing) {
+  if (isEditing) {
     return (
       <input
         type="date"
         defaultValue={value || ''}
         autoFocus
-        className="text-xs border border-[var(--color-terra)] rounded-lg px-2 py-1 w-[120px] outline-none focus:ring-2 focus:ring-[var(--color-terra)]/30"
+        className="text-xs border border-[var(--color-terra)] rounded-lg px-2 py-1 w-[130px] outline-none focus:ring-2 focus:ring-[var(--color-terra)]/30"
         onBlur={(e) => {
           if (e.target.value) {
             onUpdate(orderId, e.target.value);
             toast.success('Đã cập nhật ngày đặt');
           }
-          setEditing(false);
+          onStopEdit();
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-          if (e.key === 'Escape') setEditing(false);
+          if (e.key === 'Escape') onStopEdit();
         }}
       />
     );
@@ -225,7 +274,7 @@ function InlineDateCell({
 
   return (
     <button
-      onClick={() => setEditing(true)}
+      onClick={onStartEdit}
       className="text-sm font-medium hover:text-[var(--color-terra)] hover:underline decoration-dashed underline-offset-2 transition-colors cursor-pointer"
     >
       {display}
@@ -240,7 +289,21 @@ function OrdersTableContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const statusFilter = searchParams.get('status') as OrderStatus | null;
 
-  // Dữ liệu mẫu - sau này sẽ thay bằng Supabase
+  // ============================================
+  // State quản lý dropdown: chỉ 1 cái mở tại 1 thời điểm
+  // Giá trị: null (tất cả đóng) hoặc "status-{orderId}" / "staff-{orderId}" / "date-{orderId}"
+  // ============================================
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const toggleDropdown = useCallback((key: string) => {
+    setActiveDropdown(prev => prev === key ? null : key);
+  }, []);
+
+  const closeAllDropdowns = useCallback(() => {
+    setActiveDropdown(null);
+  }, []);
+
+  // Dữ liệu mẫu
   const [ordersState, setOrdersState] = useState(() => getOrdersWithCustomer(role || 'viewer'));
   const orders = ordersState;
 
@@ -277,7 +340,6 @@ function OrdersTableContent() {
       prev.map(o => o.id === orderId ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o)
     );
     toast.success(`Đã cập nhật tiến độ: ${getStatusLabel(newStatus)}`);
-    // TODO: Gọi Server Action updateOrderStatus(orderId, newStatus)
   }, []);
 
   const handleStaffUpdate = useCallback((orderId: string, staffId: string) => {
@@ -287,14 +349,12 @@ function OrdersTableContent() {
       prev.map(o => o.id === orderId ? { ...o, assigned_staff: [staff], updated_at: new Date().toISOString() } : o)
     );
     toast.success(`Đã chọn nghệ nhân: ${staff.name}`);
-    // TODO: Gọi Server Action updateOrderStaff(orderId, staffId)
   }, []);
 
   const handleDateUpdate = useCallback((orderId: string, date: string) => {
     setOrdersState(prev =>
       prev.map(o => o.id === orderId ? { ...o, start_date: date, updated_at: new Date().toISOString() } : o)
     );
-    // TODO: Gọi Server Action updateOrder(orderId, { start_date: date })
   }, []);
 
   return (
@@ -334,7 +394,7 @@ function OrdersTableContent() {
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-[var(--color-border-warm)] overflow-hidden animate-fade-in-up">
+        <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-[var(--color-border-warm)] overflow-visible animate-fade-in-up">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--color-border-warm)] bg-[var(--color-cream)]/50">
@@ -356,23 +416,19 @@ function OrdersTableContent() {
                   className="border-b border-[var(--color-border-warm)]/50 hover:bg-[var(--color-cream)]/30 transition-colors animate-fade-in-up"
                   style={{ animationDelay: `${i * 0.03}s` }}
                 >
-                  {/* Mã đơn - chỉ Admin sửa được */}
                   <td className="py-3 px-4">
                     <span className="font-mono text-xs font-medium text-[var(--color-terra)]">{order.order_code}</span>
                   </td>
-                  {/* Khách hàng - chỉ Admin sửa được */}
                   <td className="py-3 px-4">
                     <div>
                       <p className="font-medium text-sm">{order.customer_name}</p>
                       <PhoneDisplay phone={order.customer_phone} />
                     </div>
                   </td>
-                  {/* Sản phẩm - chỉ Admin sửa được */}
                   <td className="py-3 px-4">
                     <p className="text-sm">{order.product_name}</p>
                     <p className="text-xs text-muted-foreground">x{order.quantity}</p>
                   </td>
-                  {/* Ảnh minh họa - chỉ Admin upload */}
                   <td className="py-3 px-4">
                     <InlineImageCell
                       images={order.reference_images || []}
@@ -380,31 +436,34 @@ function OrdersTableContent() {
                       canUpload={role === 'admin'}
                     />
                   </td>
-                  {/* Ngày đặt - mọi người sửa được */}
                   <td className="py-3 px-4">
                     <InlineDateCell
                       value={order.start_date}
                       orderId={order.id}
                       onUpdate={handleDateUpdate}
+                      isEditing={activeDropdown === `date-${order.id}`}
+                      onStartEdit={() => toggleDropdown(`date-${order.id}`)}
+                      onStopEdit={closeAllDropdowns}
                     />
                   </td>
-                  {/* Nghệ nhân - mọi người sửa được */}
                   <td className="py-3 px-4">
                     <InlineStaffSelect
                       currentStaff={order.assigned_staff}
                       orderId={order.id}
                       onUpdate={handleStaffUpdate}
+                      isOpen={activeDropdown === `staff-${order.id}`}
+                      onToggle={() => toggleDropdown(`staff-${order.id}`)}
                     />
                   </td>
-                  {/* Tiến độ - mọi người sửa được */}
                   <td className="py-3 px-4">
                     <InlineStatusSelect
                       value={order.status}
                       orderId={order.id}
                       onUpdate={handleStatusUpdate}
+                      isOpen={activeDropdown === `status-${order.id}`}
+                      onToggle={() => toggleDropdown(`status-${order.id}`)}
                     />
                   </td>
-                  {/* Cập nhật */}
                   <td className="py-3 px-4">
                     {order.latest_update ? (
                       <span className="text-xs text-muted-foreground">{formatRelativeTime(order.latest_update.created_at)}</span>
@@ -412,7 +471,6 @@ function OrdersTableContent() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  {/* Actions */}
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1 justify-end">
                       <Link href={`/don-hang/${order.id}`}>
@@ -458,7 +516,13 @@ function OrdersTableContent() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-[var(--color-terra)] font-medium">{order.order_code}</span>
-                  <InlineStatusSelect value={order.status} orderId={order.id} onUpdate={handleStatusUpdate} />
+                  <InlineStatusSelect
+                    value={order.status}
+                    orderId={order.id}
+                    onUpdate={handleStatusUpdate}
+                    isOpen={activeDropdown === `m-status-${order.id}`}
+                    onToggle={() => toggleDropdown(`m-status-${order.id}`)}
+                  />
                 </div>
                 <Link href={`/don-hang/${order.id}`}>
                   <ChevronRight size={16} className="text-muted-foreground" />
@@ -470,14 +534,27 @@ function OrdersTableContent() {
               <p className="text-sm text-muted-foreground mt-1">{order.product_name} x{order.quantity}</p>
 
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border-warm)]/50">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div>
-                    <p className="text-[10px] text-muted-foreground">Ngày đặt</p>
-                    <InlineDateCell value={order.start_date} orderId={order.id} onUpdate={handleDateUpdate} />
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Ngày đặt</p>
+                    <InlineDateCell
+                      value={order.start_date}
+                      orderId={order.id}
+                      onUpdate={handleDateUpdate}
+                      isEditing={activeDropdown === `m-date-${order.id}`}
+                      onStartEdit={() => toggleDropdown(`m-date-${order.id}`)}
+                      onStopEdit={closeAllDropdowns}
+                    />
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground">Nghệ nhân</p>
-                    <InlineStaffSelect currentStaff={order.assigned_staff} orderId={order.id} onUpdate={handleStaffUpdate} />
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Nghệ nhân</p>
+                    <InlineStaffSelect
+                      currentStaff={order.assigned_staff}
+                      orderId={order.id}
+                      onUpdate={handleStaffUpdate}
+                      isOpen={activeDropdown === `m-staff-${order.id}`}
+                      onToggle={() => toggleDropdown(`m-staff-${order.id}`)}
+                    />
                   </div>
                 </div>
                 {order.latest_update && (
@@ -487,7 +564,6 @@ function OrdersTableContent() {
                 )}
               </div>
 
-              {/* Ảnh minh họa trên mobile */}
               {(order.reference_images.length > 0 || role === 'admin') && (
                 <div className="mt-3 pt-3 border-t border-[var(--color-border-warm)]/50">
                   <p className="text-[10px] text-muted-foreground mb-1.5">Ảnh minh họa</p>
