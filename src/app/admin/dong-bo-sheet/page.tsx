@@ -93,7 +93,7 @@ export default function SheetSyncPage() {
           <p className="text-sm text-muted-foreground mt-1">Đồng bộ 2 chiều giữa webapp và Google Sheet</p>
         </div>
         <a
-          href="https://docs.google.com/spreadsheets"
+          href="/api/open-sheet"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[var(--color-border-warm)] text-sm font-medium hover:bg-[var(--color-cream)] transition-colors"
