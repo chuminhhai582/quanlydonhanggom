@@ -17,6 +17,7 @@ interface InlineImageCellProps {
 export default function InlineImageCell({ images, orderId, canUpload, onUpdate }: InlineImageCellProps) {
   const [imgs, setImgs] = useState<string[]>(images);
   const [isUploading, setIsUploading] = useState(false);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,7 +78,8 @@ export default function InlineImageCell({ images, orderId, canUpload, onUpdate }
     }
   }, [imgs, orderId, onUpdate]);
 
-  const removeImg = useCallback(async (idx: number) => {
+  const removeImg = useCallback(async (e: React.MouseEvent, idx: number) => {
+    e.stopPropagation(); // Ngăn sự kiện click lan truyền ra ngoài
     const newImgs = imgs.filter((_, i) => i !== idx);
     const toastId = toast.loading('Đang xóa ảnh...');
     try {
@@ -98,44 +100,71 @@ export default function InlineImageCell({ images, orderId, canUpload, onUpdate }
   }, [imgs, orderId, onUpdate]);
 
   return (
-    <div className="flex items-center gap-2">
-      {imgs.map((src, i) => (
-        <div key={i} className="relative group w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border border-[var(--color-border-warm)] shadow-sm shrink-0">
-          <img src={src} alt={`Ảnh minh họa ${i + 1}`} className="w-full h-full object-cover" />
-          {canUpload && (
-            <button
-              onClick={() => removeImg(i)}
-              aria-label={`Xóa ảnh ${i + 1}`}
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-            >
-              <X size={16} className="text-white" />
-            </button>
-          )}
-        </div>
-      ))}
-      {canUpload && imgs.length < MAX_IMAGES && (
-        <>
-          <button
-            onClick={() => fileRef.current?.click()}
-            aria-label="Thêm ảnh minh họa"
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 border-dashed border-[var(--color-border-warm)] flex items-center justify-center hover:border-[var(--color-terra)] hover:bg-[var(--color-cream)]/50 transition-colors shrink-0"
-            disabled={isUploading}
+    <>
+      <div className="flex items-center gap-2">
+        {imgs.map((src, i) => (
+          <div 
+            key={i} 
+            className="relative group w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border border-[var(--color-border-warm)] shadow-sm shrink-0 cursor-pointer hover:border-[var(--color-terra)] transition-colors"
+            onClick={() => setViewingImage(src)}
           >
-            <ImagePlus size={18} className="text-muted-foreground" />
+            <img src={src} alt={`Ảnh minh họa ${i + 1}`} className="w-full h-full object-cover" />
+            {canUpload && (
+              <button
+                onClick={(e) => removeImg(e, i)}
+                aria-label={`Xóa ảnh ${i + 1}`}
+                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              >
+                <X size={16} className="text-white" />
+              </button>
+            )}
+          </div>
+        ))}
+        {canUpload && imgs.length < MAX_IMAGES && (
+          <>
+            <button
+              onClick={() => fileRef.current?.click()}
+              aria-label="Thêm ảnh minh họa"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 border-dashed border-[var(--color-border-warm)] flex items-center justify-center hover:border-[var(--color-terra)] hover:bg-[var(--color-cream)]/50 transition-colors shrink-0"
+              disabled={isUploading}
+            >
+              <ImagePlus size={18} className="text-muted-foreground" />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </>
+        )}
+        {!canUpload && imgs.length === 0 && (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </div>
+
+      {/* Fullscreen Image Viewer Modal */}
+      {viewingImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setViewingImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-black/50 hover:bg-black/70 rounded-full transition-all"
+            onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
+          >
+            <X size={24} />
           </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
+          <img 
+            src={viewingImage} 
+            alt="Ảnh xem to" 
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()} 
           />
-        </>
+        </div>
       )}
-      {!canUpload && imgs.length === 0 && (
-        <span className="text-xs text-muted-foreground">—</span>
-      )}
-    </div>
+    </>
   );
 }
