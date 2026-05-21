@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error('API /orders/assignments error:', err);
     return NextResponse.json(
-      { error: err.message || 'Lỗi gán nhân viên' },
+      { error: err.message || 'Lỗi gán nghệ nhân' },
       { status: 500 }
     );
   }

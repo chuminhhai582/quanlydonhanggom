@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/staff
- * Trả về danh sách nhân viên (staff_names) từ Supabase
+ * Trả về danh sách nghệ nhân (staff_names) từ Supabase
  */
 export async function GET() {
   try {
@@ -29,7 +29,7 @@ export async function GET() {
   } catch (err: any) {
     console.error('API /staff error:', err);
     return NextResponse.json(
-      { error: err.message || 'Lỗi lấy dữ liệu nhân viên' },
+      { error: err.message || 'Lỗi lấy dữ liệu nghệ nhân' },
       { status: 500 }
     );
   }

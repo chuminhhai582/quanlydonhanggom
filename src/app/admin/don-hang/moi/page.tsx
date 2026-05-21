@@ -109,7 +109,7 @@ export default function CreateOrderPage() {
           }),
         });
         if (!assignRes.ok) {
-          console.warn('Không thể gán nhân viên, nhưng đơn hàng đã tạo thành công.');
+          console.warn('Không thể gán nghệ nhân, nhưng đơn hàng đã tạo thành công.');
         }
       }
 
@@ -261,11 +261,11 @@ export default function CreateOrderPage() {
 
           {/* Staff */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Nhân viên phụ trách</Label>
+            <Label className="text-sm font-medium">Nghệ nhân phụ trách</Label>
             {loadingData ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 size={14} className="animate-spin" />
-                Đang tải danh sách nhân viên...
+                Đang tải danh sách nghệ nhân...
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -295,7 +295,7 @@ export default function CreateOrderPage() {
                   </label>
                 ))}
                 {staffNames.filter(s => s.is_active).length === 0 && (
-                  <p className="text-sm text-muted-foreground">Chưa có nhân viên nào</p>
+                  <p className="text-sm text-muted-foreground">Chưa có nghệ nhân nào</p>
                 )}
               </div>
             )}

@@ -69,7 +69,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-semibold text-[var(--color-text-primary)]">Mã PIN truy cập</h2>
-              <p className="text-xs text-muted-foreground">Mã PIN cho nhân viên xưởng nhập khi vào app</p>
+              <p className="text-xs text-muted-foreground">Mã PIN cho nghệ nhân nhập khi vào app</p>
             </div>
           </div>
           <div className="p-6 space-y-4">

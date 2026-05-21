@@ -89,7 +89,7 @@ export default function Header() {
                     {role === 'admin' ? adminName : 'Khách'}
                   </span>
                   <span className="text-[10px] text-muted-foreground leading-none">
-                    {role === 'admin' ? 'Quản lý' : 'Nhân viên'}
+                    {role === 'admin' ? 'Quản lý' : 'Nghệ nhân'}
                   </span>
                 </div>
                 <ChevronDown size={14} className="text-muted-foreground" />
