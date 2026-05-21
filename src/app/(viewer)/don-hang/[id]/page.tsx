@@ -16,6 +16,7 @@ import {
   ArrowLeft, Pencil, Camera, Image as ImageIcon, Clock, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import InlineImageCell from '@/components/orders/InlineImageCell';
 
 // Ảnh tiến độ + timestamp
 interface ProgressPhoto {
@@ -152,6 +153,12 @@ export default function OrderDetailPage() {
               <span className="text-xs text-muted-foreground w-20 shrink-0">Sản phẩm</span>
               <span className="text-sm">{order.product_name} <span className="text-muted-foreground">x{order.quantity}</span></span>
             </div>
+            {(order.reference_images?.length > 0 || role === 'admin') && (
+              <div className="flex items-start gap-3">
+                <span className="text-xs text-muted-foreground w-20 shrink-0 pt-2">Ảnh mẫu</span>
+                <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+              </div>
+            )}
             {order.custom_requirements && (
               <div className="flex items-start gap-3">
                 <span className="text-xs text-muted-foreground w-20 shrink-0">Yêu cầu</span>
