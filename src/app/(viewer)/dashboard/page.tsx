@@ -142,14 +142,14 @@ function DashboardContent() {
     <div>
       <StatusTabs counts={counts} />
 
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border-warm)] p-4 md:p-6 animate-fade-in-up">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border-warm)] p-2.5 sm:p-4 md:p-6 animate-fade-in-up">
           <Calendar
             localizer={localizer}
             events={events}
             startAccessor="start"
             endAccessor="end"
-            style={{ height: 'calc(100vh - 280px)', minHeight: 500 }}
+            style={{ height: 'calc(100vh - 260px)', minHeight: 350 }}
             defaultView={defaultView}
             views={[Views.MONTH, Views.WEEK, Views.DAY]}
             date={currentDate}

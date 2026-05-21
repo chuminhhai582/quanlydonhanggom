@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { OrderStatus, StatusTabItem } from '@/lib/types';
 import { getStatusColor } from '@/lib/utils/order-code';
+import { useRef, useEffect, useState } from 'react';
 
 interface StatusTabsProps {
   counts: {
@@ -33,6 +34,18 @@ export default function StatusTabs({ counts }: StatusTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const activeStatus = (searchParams.get('status') as OrderStatus | 'all') || 'all';
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  // Auto-scroll tab active vào giữa viewport trên mobile
+  useEffect(() => {
+    if (activeRef.current && scrollRef.current) {
+      const container = scrollRef.current;
+      const el = activeRef.current;
+      const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2;
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, [activeStatus]);
 
   const handleTabClick = (key: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -44,22 +57,44 @@ export default function StatusTabs({ counts }: StatusTabsProps) {
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  // Trên mobile: hiển thị tất cả tab kể cả count=0 (để user biết có trạng thái đó)
+  // Trên desktop: ẩn tab count=0
+
   return (
-    <div className="sticky top-16 z-30 bg-[var(--color-cream)]/95 backdrop-blur-md border-b border-[var(--color-border-warm)] py-3 px-4">
+    <div className="sticky top-16 z-30 bg-[var(--color-cream)]/95 backdrop-blur-md border-b border-[var(--color-border-warm)]">
       <div className="max-w-7xl mx-auto">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {/* Scrollable container */}
+        <div
+          ref={scrollRef}
+          className="flex gap-1.5 sm:gap-2 overflow-x-auto py-2.5 px-3 sm:px-4 scrollbar-none scroll-smooth"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {tabs.map(tab => {
             const count = counts[tab.key as keyof typeof counts];
             const isActive = activeStatus === tab.key;
-            if (tab.key !== 'all' && count === 0) return null;
+            // Trên mobile: luôn hiển thị; trên desktop sẽ ẩn bằng CSS nếu count=0
+            if (tab.key !== 'all' && count === 0) {
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleTabClick(tab.key)}
+                  className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 bg-white/50 text-gray-400 border border-dashed border-gray-200"
+                >
+                  {tab.icon && <span className="text-[10px]">{tab.icon}</span>}
+                  {tab.label}
+                  <span className="ml-0.5 px-1 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-gray-100/50">0</span>
+                </button>
+              );
+            }
 
             return (
               <button
                 key={tab.key}
+                ref={isActive ? activeRef : null}
                 onClick={() => handleTabClick(tab.key)}
                 className={`
-                  flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap
-                  transition-all duration-200 shrink-0
+                  flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-semibold whitespace-nowrap
+                  transition-all duration-200 shrink-0 active:scale-95
                   ${isActive
                     ? 'text-white shadow-md'
                     : 'bg-white text-gray-600 border border-[var(--color-border-warm)] hover:border-gray-300 hover:shadow-sm'}
@@ -72,7 +107,7 @@ export default function StatusTabs({ counts }: StatusTabsProps) {
                 {tab.icon && <span className="text-[10px]">{tab.icon}</span>}
                 {tab.label}
                 <span className={`
-                  ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold
+                  ml-0.5 px-1 sm:px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold
                   ${isActive ? 'bg-white/20' : 'bg-gray-100'}
                 `}>
                   {count}

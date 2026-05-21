@@ -169,25 +169,28 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass border-t border-[var(--color-border-warm)]">
-        <nav className="flex items-center justify-around h-16 max-w-md mx-auto">
+      {/* Mobile bottom nav — safe area cho iPhone notch */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass border-t border-[var(--color-border-warm)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="flex items-center justify-around h-14 max-w-md mx-auto px-2">
           {navItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
               className={`
-                flex flex-col items-center gap-0.5 py-2 px-4 rounded-xl transition-all
+                flex flex-col items-center gap-0.5 py-1.5 px-5 rounded-xl transition-all active:scale-95
                 ${isActive(item.href)
                   ? 'text-[var(--color-terra)]'
                   : 'text-muted-foreground'}
               `}
             >
-              <item.icon size={20} />
+              <item.icon size={20} strokeWidth={isActive(item.href) ? 2.5 : 2} />
               <span className="text-[10px] font-medium">{item.label}</span>
+              {isActive(item.href) && (
+                <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[var(--color-terra)]" />
+              )}
             </Link>
           ))}
-          <button className="flex flex-col items-center gap-0.5 py-2 px-4 text-muted-foreground">
+          <button className="flex flex-col items-center gap-0.5 py-1.5 px-5 text-muted-foreground active:scale-95 rounded-xl relative">
             <UserCircle size={20} />
             <span className="text-[10px] font-medium">
               {role === 'admin' ? 'Admin' : 'Khách'}

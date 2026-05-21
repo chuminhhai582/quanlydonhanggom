@@ -264,13 +264,24 @@
   border: 1px solid rgba(232, 223, 211, 0.5);
 }
 
-/* Card hover */
+/* Card hover — chỉ hover trên desktop */
 .card-hover {
   @apply transition-all duration-300;
 }
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(125, 58, 30, 0.08);
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(125, 58, 30, 0.08);
+  }
+}
+
+/* Scrollbar ẩn hoàn toàn — cho status tabs, horizontal scroll */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* Progress bar */
@@ -287,8 +298,14 @@
 .rbc-calendar {
   font-family: 'Be Vietnam Pro', sans-serif !important;
 }
+.rbc-toolbar {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px !important;
+}
 .rbc-toolbar button {
-  @apply rounded-lg px-3 py-1.5 text-sm font-medium;
+  @apply rounded-lg text-sm font-medium;
+  padding: 6px 10px;
   color: #2B1810 !important;
   border-color: #E8DFD3 !important;
 }
@@ -304,7 +321,7 @@
   background: #C8621A08 !important;
 }
 .rbc-header {
-  @apply py-2 text-sm font-semibold;
+  @apply py-1.5 sm:py-2 text-xs sm:text-sm font-semibold;
   color: #7A6B5D !important;
   border-color: #E8DFD3 !important;
 }
@@ -312,10 +329,10 @@
   background: #FAF7F2 !important;
 }
 .rbc-date-cell {
-  @apply text-sm p-1;
+  @apply text-xs sm:text-sm p-0.5 sm:p-1;
 }
 .rbc-event {
-  @apply rounded-md text-xs px-1.5 py-0.5;
+  @apply rounded-md text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5;
   border: none !important;
 }
 .rbc-month-view, .rbc-time-view {
@@ -324,4 +341,27 @@
 .rbc-day-bg + .rbc-day-bg,
 .rbc-month-row + .rbc-month-row {
   border-color: #E8DFD3 !important;
+}
+
+/* Calendar mobile: toolbar nhỏ gọn hơn */
+@media (max-width: 640px) {
+  .rbc-toolbar {
+    font-size: 13px;
+    justify-content: center;
+  }
+  .rbc-toolbar button {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .rbc-toolbar-label {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 4px 0;
+    order: -1;
+  }
+  .rbc-show-more {
+    font-size: 10px !important;
+  }
 }
