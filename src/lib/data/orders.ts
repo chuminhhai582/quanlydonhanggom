@@ -26,7 +26,10 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
           staff_names (id, name, avatar_color, is_active)
         ),
         order_updates (
-          id, order_id, milestone_name, note, status_after, created_by_name, created_at
+          id, order_id, milestone_name, note, status_after, created_by_name, created_at,
+          order_update_images (
+            id, image_url, storage_path, created_at
+          )
         )
       `)
       .order('created_at', { ascending: false })
@@ -45,6 +48,9 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
         .filter(Boolean);
         
       const updates = order.order_updates || [];
+      updates.forEach((u: any) => {
+        u.images = u.order_update_images || [];
+      });
       updates.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       return {
@@ -73,6 +79,7 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
         assigned_staff: staff,
         updates_count: updates.length,
         latest_update: updates[0] || undefined,
+        order_updates: updates,
       };
     });
   } catch (err: any) {

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import InlineImageCell from '@/components/orders/InlineImageCell';
+import imageCompression from 'browser-image-compression';
 
 // Ảnh tiến độ + timestamp
 interface ProgressPhoto {
@@ -42,6 +43,21 @@ export default function OrderDetailPage() {
     return ordersState.find(o => o.id === params.id);
   }, [params.id, ordersState]);
 
+  // Load photos from order
+  useMemo(() => {
+    if (order?.order_updates) {
+      const allPhotos = order.order_updates.flatMap(u => 
+        (u.images || []).map((img: any) => ({
+          id: img.id,
+          url: img.image_url,
+          timestamp: img.created_at
+        }))
+      );
+      allPhotos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setPhotos(allPhotos);
+    }
+  }, [order]);
+
   const handleStatusChange = useCallback((orderId: string, newStatus: OrderStatus) => {
     setOrdersState(prev =>
       prev.map(o => o.id === orderId ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o)
@@ -56,32 +72,83 @@ export default function OrderDetailPage() {
   }, []);
 
   // Xử lý chụp ảnh / tải ảnh
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !order) return;
 
-    const newPhotos: ProgressPhoto[] = [];
-    for (let i = 0; i < files.length; i++) {
-      newPhotos.push({
-        id: `photo-${Date.now()}-${i}`,
-        url: URL.createObjectURL(files[i]),
-        timestamp: new Date().toISOString(),
+    const toastId = toast.loading('Đang tải ảnh tiến độ lên...');
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        // Nén ảnh trước khi upload
+        const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
+        const compressedFile = await imageCompression(files[i], options);
+
+        const formData = new FormData();
+        formData.append('file', compressedFile, compressedFile.name);
+        
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!res.ok) throw new Error('Lỗi tải ảnh');
+        const data = await res.json();
+        uploadedUrls.push(data.url);
+      }
+
+      // Create order_update record
+      const updateRes = await fetch(`/api/orders/${order.id}/updates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          milestone_name: 'Cập nhật ảnh tiến độ',
+          status_after: order.status,
+          image_urls: uploadedUrls
+        })
       });
-    }
-    // Thêm mới nhất lên đầu
-    setPhotos(prev => [...newPhotos, ...prev]);
-    toast.success(`Đã thêm ${files.length} ảnh tiến độ`);
-    e.target.value = '';
-  }, []);
 
-  const removePhoto = useCallback((id: string) => {
-    setPhotos(prev => {
-      const photo = prev.find(p => p.id === id);
-      if (photo?.url.startsWith('blob:')) URL.revokeObjectURL(photo.url);
-      return prev.filter(p => p.id !== id);
-    });
-    toast.success('Đã xóa ảnh');
-  }, []);
+      if (!updateRes.ok) throw new Error('Lỗi cập nhật CSDL');
+      const updateData = await updateRes.json();
+      
+      const newPhotos = updateData.images.map((img: any) => ({
+        id: img.id,
+        url: img.image_url,
+        timestamp: img.created_at
+      }));
+
+      setPhotos(prev => [...newPhotos, ...prev]);
+      toast.success(`Đã lưu ${files.length} ảnh tiến độ`, { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Có lỗi xảy ra khi tải ảnh lên', { id: toastId });
+    } finally {
+      e.target.value = '';
+    }
+  }, [order]);
+
+  const removePhoto = useCallback(async (id: string) => {
+    const isTemp = id.startsWith('temp-') || id.startsWith('photo-');
+    if (isTemp) {
+      toast.error('Vui lòng tải lại trang trước khi xóa ảnh vừa upload');
+      return;
+    }
+
+    const toastId = toast.loading('Đang xóa ảnh...');
+    try {
+      const res = await fetch(`/api/orders/${order?.id}/updates/images/${id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Lỗi xóa ảnh CSDL');
+
+      setPhotos(prev => prev.filter(p => p.id !== id));
+      toast.success('Đã xóa ảnh', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Có lỗi xảy ra khi xóa ảnh', { id: toastId });
+    }
+  }, [order?.id]);
 
   // Format timestamp cho hiển thị
   const formatPhotoTime = (iso: string) => {

@@ -57,6 +57,7 @@ export interface OrderWithCustomer extends Order {
   assigned_staff: StaffName[];
   updates_count: number;
   latest_update?: OrderUpdate;
+  order_updates?: OrderUpdate[];
 }
 
 export interface StaffName {
