@@ -96,6 +96,12 @@ function OrdersTableContent() {
     );
   }, []);
 
+  const handleImagesUpdate = useCallback((orderId: string, images: string[]) => {
+    setOrdersState(prev =>
+      prev.map(o => o.id === orderId ? { ...o, reference_images: images, updated_at: new Date().toISOString() } : o)
+    );
+  }, []);
+
   const getStaggerDelay = (i: number) => Math.min(i * 0.03, MAX_STAGGER_DELAY);
 
   return (
@@ -166,6 +172,7 @@ function OrdersTableContent() {
                   handleStatusUpdate={handleStatusUpdate}
                   handleDateUpdate={handleDateUpdate}
                   handleStaffUpdate={handleStaffUpdate}
+                  handleImagesUpdate={handleImagesUpdate}
                 />
               ))}
             </tbody>
@@ -194,6 +201,7 @@ function OrdersTableContent() {
                 handleStatusUpdate={handleStatusUpdate}
                 handleDateUpdate={handleDateUpdate}
                 handleStaffUpdate={handleStaffUpdate}
+                handleImagesUpdate={handleImagesUpdate}
                 isTablet={true}
               />
             </div>
@@ -221,6 +229,7 @@ function OrdersTableContent() {
                 handleStatusUpdate={handleStatusUpdate}
                 handleDateUpdate={handleDateUpdate}
                 handleStaffUpdate={handleStaffUpdate}
+                handleImagesUpdate={handleImagesUpdate}
                 isTablet={false}
               />
             </div>

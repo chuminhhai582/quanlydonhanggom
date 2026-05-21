@@ -49,6 +49,12 @@ export default function OrderDetailPage() {
     toast.success(`Đã cập nhật: ${getStatusLabel(newStatus)}`);
   }, []);
 
+  const handleImagesUpdate = useCallback((orderId: string, images: string[]) => {
+    setOrdersState(prev =>
+      prev.map(o => o.id === orderId ? { ...o, reference_images: images, updated_at: new Date().toISOString() } : o)
+    );
+  }, []);
+
   // Xử lý chụp ảnh / tải ảnh
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -156,7 +162,7 @@ export default function OrderDetailPage() {
             {(order.reference_images?.length > 0 || role === 'admin') && (
               <div className="flex items-start gap-3">
                 <span className="text-xs text-muted-foreground w-20 shrink-0 pt-2">Ảnh mẫu</span>
-                <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+                <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} onUpdate={handleImagesUpdate} />
               </div>
             )}
             {order.custom_requirements && (

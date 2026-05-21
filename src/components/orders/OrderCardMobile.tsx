@@ -17,6 +17,7 @@ interface OrderCardMobileProps {
   handleStatusUpdate: (orderId: string, status: OrderStatus) => void;
   handleDateUpdate: (orderId: string, date: string) => void;
   handleStaffUpdate: (orderId: string, staffId: string) => void;
+  handleImagesUpdate?: (orderId: string, images: string[]) => void;
   isTablet?: boolean;
 }
 
@@ -29,6 +30,7 @@ export default function OrderCardMobile({
   handleStatusUpdate,
   handleDateUpdate,
   handleStaffUpdate,
+  handleImagesUpdate,
   isTablet = false
 }: OrderCardMobileProps) {
   const prefix = isTablet ? 't-' : 'm-';
@@ -64,7 +66,7 @@ export default function OrderCardMobile({
               <p className="text-xs text-muted-foreground truncate mt-0.5">{order.product_name} x{order.quantity}</p>
             </div>
             {(order.reference_images?.length > 0 || role === 'admin') && (
-              <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+              <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} onUpdate={handleImagesUpdate} />
             )}
           </div>
 
@@ -125,7 +127,7 @@ export default function OrderCardMobile({
             <p className="text-xs text-muted-foreground truncate">{order.product_name} x{order.quantity}</p>
           </div>
           {(order.reference_images?.length > 0 || role === 'admin') && (
-            <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+            <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} onUpdate={handleImagesUpdate} />
           )}
         </div>
 

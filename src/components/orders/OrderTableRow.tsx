@@ -19,6 +19,7 @@ interface OrderTableRowProps {
   handleStatusUpdate: (orderId: string, status: OrderStatus) => void;
   handleDateUpdate: (orderId: string, date: string) => void;
   handleStaffUpdate: (orderId: string, staffId: string) => void;
+  handleImagesUpdate?: (orderId: string, images: string[]) => void;
 }
 
 export default function OrderTableRow({
@@ -29,7 +30,8 @@ export default function OrderTableRow({
   closeAllDropdowns,
   handleStatusUpdate,
   handleDateUpdate,
-  handleStaffUpdate
+  handleStaffUpdate,
+  handleImagesUpdate
 }: OrderTableRowProps) {
   return (
     <tr className="border-b border-[var(--color-border-warm)] hover:bg-[var(--color-cream)]/30 transition-colors">
@@ -45,7 +47,7 @@ export default function OrderTableRow({
         <p className="text-xs text-muted-foreground">x{order.quantity}</p>
       </td>
       <td className="py-3 px-3 xl:px-4">
-        <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
+        <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} onUpdate={handleImagesUpdate} />
       </td>
       <td className="py-3 px-3 xl:px-4">
         <InlineDateCell

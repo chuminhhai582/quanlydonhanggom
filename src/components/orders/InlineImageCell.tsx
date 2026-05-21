@@ -10,15 +10,17 @@ interface InlineImageCellProps {
   images: string[];
   orderId: string;
   canUpload: boolean;
+  onUpdate?: (orderId: string, newImages: string[]) => void;
 }
 
-export default function InlineImageCell({ images, orderId, canUpload }: InlineImageCellProps) {
+export default function InlineImageCell({ images, orderId, canUpload, onUpdate }: InlineImageCellProps) {
   const [imgs, setImgs] = useState<string[]>(images);
+  const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
     const remaining = MAX_IMAGES - imgs.length;
     if (remaining <= 0) {
@@ -26,26 +28,65 @@ export default function InlineImageCell({ images, orderId, canUpload }: InlineIm
       return;
     }
 
+    setIsUploading(true);
+    const toastId = toast.loading('Đang tải ảnh lên...');
     const newImgs = [...imgs];
-    for (let i = 0; i < Math.min(files.length, remaining); i++) {
-      newImgs.push(URL.createObjectURL(files[i]));
-    }
-    setImgs(newImgs);
-    toast.success('Đã thêm ảnh minh họa');
-    e.target.value = '';
-  }, [imgs]);
 
-  const removeImg = useCallback((idx: number) => {
-    setImgs(prev => {
-      // Revoke URL để tránh memory leak
-      const url = prev[idx];
-      if (url?.startsWith('blob:')) {
-        URL.revokeObjectURL(url);
+    try {
+      for (let i = 0; i < Math.min(files.length, remaining); i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+        
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!res.ok) throw new Error('Lỗi tải ảnh');
+        
+        const data = await res.json();
+        newImgs.push(data.url);
       }
-      return prev.filter((_, i) => i !== idx);
-    });
-    toast.success('Đã xóa ảnh');
-  }, []);
+
+      // Save to database
+      const updateRes = await fetch(`/api/orders/${orderId}/images`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: newImgs })
+      });
+      if (!updateRes.ok) throw new Error('Lỗi cập nhật CSDL');
+
+      setImgs(newImgs);
+      if (onUpdate) onUpdate(orderId, newImgs);
+      toast.success('Đã lưu ảnh mới', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Có lỗi xảy ra khi tải ảnh lên', { id: toastId });
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  }, [imgs, orderId, onUpdate]);
+
+  const removeImg = useCallback(async (idx: number) => {
+    const newImgs = imgs.filter((_, i) => i !== idx);
+    const toastId = toast.loading('Đang xóa ảnh...');
+    try {
+      const updateRes = await fetch(`/api/orders/${orderId}/images`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: newImgs })
+      });
+      if (!updateRes.ok) throw new Error('Lỗi cập nhật CSDL');
+
+      setImgs(newImgs);
+      if (onUpdate) onUpdate(orderId, newImgs);
+      toast.success('Đã xóa ảnh', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Có lỗi xảy ra khi xóa ảnh', { id: toastId });
+    }
+  }, [imgs, orderId, onUpdate]);
 
   return (
     <div className="flex items-center gap-1.5">
