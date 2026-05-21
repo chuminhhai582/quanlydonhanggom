@@ -8,11 +8,8 @@ import { OrderWithCustomer, OrderStatus } from '@/lib/types';
  * Nếu Supabase chưa kết nối → fallback về mock-data.
  */
 export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCustomer[]> {
-  // Kiểm tra Supabase đã cấu hình chưa
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    // Fallback mock-data
-    const { getOrdersWithCustomer } = await import('@/lib/mock-data');
-    return getOrdersWithCustomer(role);
+    throw new Error('Supabase URL is not configured');
   }
 
   try {
@@ -26,24 +23,18 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
         customers!inner (name, phone, email, address),
         order_assignments (
           staff_names (id, name, avatar_color, is_active)
+        ),
+        order_updates (
+          id, order_id, status, created_at, updated_by, note
         )
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error('Supabase query error:', error);
-      // Fallback mock-data khi lỗi
-      const { getOrdersWithCustomer } = await import('@/lib/mock-data');
-      return getOrdersWithCustomer(role);
+      throw new Error(error.message);
     }
-
-    // Lấy latest update cho mỗi đơn
-    const orderIds = (orders || []).map((o: any) => o.id);
-    const { data: latestUpdates } = await supabase
-      .from('order_updates')
-      .select('*')
-      .in('order_id', orderIds)
-      .order('created_at', { ascending: false });
 
     // Map sang OrderWithCustomer
     return (orders || []).map((order: any) => {
@@ -51,7 +42,9 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
       const staff = (order.order_assignments || [])
         .map((a: any) => a.staff_names)
         .filter(Boolean);
-      const updates = (latestUpdates || []).filter((u: any) => u.order_id === order.id);
+        
+      const updates = order.order_updates || [];
+      updates.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       return {
         id: order.id,
@@ -81,10 +74,9 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
         latest_update: updates[0] || undefined,
       };
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('fetchOrders error:', err);
-    const { getOrdersWithCustomer } = await import('@/lib/mock-data');
-    return getOrdersWithCustomer(role);
+    throw new Error(err.message || 'Lỗi khi lấy dữ liệu đơn hàng');
   }
 }
 

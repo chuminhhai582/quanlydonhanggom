@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { OrderWithCustomer, OrderStatus } from '@/lib/types';
-import { getOrdersWithCustomer } from '@/lib/mock-data';
 
 /**
  * Hook fetch đơn hàng từ API /api/orders (Supabase).
- * Fallback: nếu API lỗi → dùng mock-data client-side.
  */
 export function useOrders(role: 'admin' | 'viewer') {
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
@@ -23,8 +21,7 @@ export function useOrders(role: 'admin' | 'viewer') {
         setOrders(data);
       }
     } catch {
-      setError('Không thể kết nối Supabase, đang dùng dữ liệu mẫu');
-      setOrders(getOrdersWithCustomer(role));
+      setError('Lỗi kết nối máy chủ');
     } finally {
       setLoading(false);
     }

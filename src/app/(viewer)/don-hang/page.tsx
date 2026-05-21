@@ -4,13 +4,11 @@ import { useState, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import StatusTabs from '@/components/orders/StatusTabs';
-import PhoneDisplay from '@/components/orders/PhoneDisplay';
-import InlineStatusSelect from '@/components/orders/InlineStatusSelect';
-import InlineStaffSelect from '@/components/orders/InlineStaffSelect';
-import InlineImageCell from '@/components/orders/InlineImageCell';
-import InlineDateCell from '@/components/orders/InlineDateCell';
+import OrderSkeleton from '@/components/orders/OrderSkeleton';
 import { useAuth } from '@/lib/auth/auth-context';
 import { mockStaffNames } from '@/lib/mock-data';
+import OrderTableRow from '@/components/orders/OrderTableRow';
+import OrderCardMobile from '@/components/orders/OrderCardMobile';
 import { useOrders } from '@/lib/hooks/useOrders';
 import { OrderStatus } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/utils/date';
@@ -40,8 +38,8 @@ function OrdersTableContent() {
   }, []);
   const closeAllDropdowns = useCallback(() => setActiveDropdown(null), []);
 
-  // Dữ liệu — fetch từ Supabase, fallback mock
-  const { orders: ordersState, setOrders: setOrdersState } = useOrders(role || 'viewer');
+  // Dữ liệu — fetch từ Supabase
+  const { orders: ordersState, setOrders: setOrdersState, loading } = useOrders(role || 'viewer');
   const counts = useOrderCounts(ordersState);
 
   const filteredOrders = useMemo(() => {
@@ -117,8 +115,12 @@ function OrdersTableContent() {
           )}
         </div>
 
-        {/* ====================== */}
-        {/* Desktop/Large Tablet Table (≥1024px) */}
+        {loading ? (
+          <OrderSkeleton />
+        ) : (
+          <>
+            {/* ====================== */}
+            {/* Desktop/Large Tablet Table (≥1024px) */}
         {/* ====================== */}
         <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-[var(--color-border-warm)] overflow-visible animate-fade-in-up">
           <table className="w-full">
@@ -137,82 +139,17 @@ function OrdersTableContent() {
             </thead>
             <tbody>
               {filteredOrders.map((order, i) => (
-                <tr
+                <OrderTableRow
                   key={order.id}
-                  className="border-b border-[var(--color-border-warm)]/50 hover:bg-[var(--color-cream)]/30 transition-colors animate-fade-in-up"
-                  style={{ animationDelay: `${getStaggerDelay(i)}s` }}
-                >
-                  <td className="py-3 px-3 xl:px-4">
-                    <span className="font-mono text-xs font-medium text-[var(--color-terra)]">{order.order_code}</span>
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <p className="font-medium text-sm truncate max-w-[140px] xl:max-w-none">{order.customer_name}</p>
-                    <PhoneDisplay phone={order.customer_phone} />
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <p className="text-sm truncate max-w-[120px] xl:max-w-none">{order.product_name}</p>
-                    <p className="text-xs text-muted-foreground">x{order.quantity}</p>
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <InlineDateCell
-                      value={order.start_date}
-                      orderId={order.id}
-                      onUpdate={handleDateUpdate}
-                      isEditing={activeDropdown === `date-${order.id}`}
-                      onStartEdit={() => toggleDropdown(`date-${order.id}`)}
-                      onStopEdit={closeAllDropdowns}
-                    />
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <InlineStaffSelect
-                      currentStaff={order.assigned_staff}
-                      orderId={order.id}
-                      onUpdate={handleStaffUpdate}
-                      isOpen={activeDropdown === `staff-${order.id}`}
-                      onToggle={() => toggleDropdown(`staff-${order.id}`)}
-                    />
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <InlineStatusSelect
-                      value={order.status}
-                      orderId={order.id}
-                      onUpdate={handleStatusUpdate}
-                      isOpen={activeDropdown === `status-${order.id}`}
-                      onToggle={() => toggleDropdown(`status-${order.id}`)}
-                    />
-                  </td>
-                  <td className="py-3 px-3 xl:px-4 hidden xl:table-cell">
-                    {order.latest_update ? (
-                      <span className="text-xs text-muted-foreground">{formatRelativeTime(order.latest_update.created_at)}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 xl:px-4">
-                    <div className="flex items-center gap-1 justify-end">
-                      <Link href={`/don-hang/${order.id}`}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-[var(--color-cream)]">
-                          <Eye size={14} />
-                        </Button>
-                      </Link>
-                      {role === 'admin' && (
-                        <>
-                          <Link href={`/admin/don-hang/${order.id}/sua`}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-[var(--color-cream)]">
-                              <Pencil size={14} />
-                            </Button>
-                          </Link>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-red-50 text-red-500">
-                            <Trash2 size={14} />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  order={order}
+                  role={role}
+                  activeDropdown={activeDropdown}
+                  toggleDropdown={toggleDropdown}
+                  closeAllDropdowns={closeAllDropdowns}
+                  handleStatusUpdate={handleStatusUpdate}
+                  handleDateUpdate={handleDateUpdate}
+                  handleStaffUpdate={handleStaffUpdate}
+                />
               ))}
             </tbody>
           </table>
@@ -230,76 +167,18 @@ function OrdersTableContent() {
         {/* ====================== */}
         <div className="hidden md:grid lg:hidden grid-cols-2 gap-3 animate-fade-in-up">
           {filteredOrders.map((order, i) => (
-            <div
-              key={order.id}
-              className="bg-white rounded-2xl border border-[var(--color-border-warm)] overflow-hidden transition-all duration-200 card-hover animate-fade-in-up"
-              style={{ animationDelay: `${getStaggerDelay(i)}s` }}
-            >
-              {/* Card header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-cream)]/30 border-b border-[var(--color-border-warm)]/50">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-[var(--color-terra)] font-medium">{order.order_code}</span>
-                  <InlineStatusSelect
-                    value={order.status}
-                    orderId={order.id}
-                    onUpdate={handleStatusUpdate}
-                    isOpen={activeDropdown === `t-status-${order.id}`}
-                    onToggle={() => toggleDropdown(`t-status-${order.id}`)}
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <Link href={`/don-hang/${order.id}`}>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg">
-                      <Eye size={13} />
-                    </Button>
-                  </Link>
-                  {role === 'admin' && (
-                    <Link href={`/admin/don-hang/${order.id}/sua`}>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg">
-                        <Pencil size={13} />
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </div>
-
-              {/* Card body */}
-              <div className="px-4 py-3 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">{order.customer_name}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{order.product_name} x{order.quantity}</p>
-                  </div>
-                  {(order.reference_images?.length > 0 || role === 'admin') && (
-                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Ngày đặt</p>
-                    <InlineDateCell
-                      value={order.start_date}
-                      orderId={order.id}
-                      onUpdate={handleDateUpdate}
-                      isEditing={activeDropdown === `t-date-${order.id}`}
-                      onStartEdit={() => toggleDropdown(`t-date-${order.id}`)}
-                      onStopEdit={closeAllDropdowns}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Nghệ nhân</p>
-                    <InlineStaffSelect
-                      currentStaff={order.assigned_staff}
-                      orderId={order.id}
-                      onUpdate={handleStaffUpdate}
-                      isOpen={activeDropdown === `t-staff-${order.id}`}
-                      onToggle={() => toggleDropdown(`t-staff-${order.id}`)}
-                    />
-                  </div>
-                </div>
-
-              </div>
+            <div key={order.id} className="animate-fade-in-up" style={{ animationDelay: `${getStaggerDelay(i)}s` }}>
+              <OrderCardMobile
+                order={order}
+                role={role}
+                activeDropdown={activeDropdown}
+                toggleDropdown={toggleDropdown}
+                closeAllDropdowns={closeAllDropdowns}
+                handleStatusUpdate={handleStatusUpdate}
+                handleDateUpdate={handleDateUpdate}
+                handleStaffUpdate={handleStaffUpdate}
+                isTablet={true}
+              />
             </div>
           ))}
           {filteredOrders.length === 0 && (
@@ -315,71 +194,18 @@ function OrdersTableContent() {
         {/* ====================== */}
         <div className="md:hidden space-y-2.5">
           {filteredOrders.map((order, i) => (
-            <div
-              key={order.id}
-              className="bg-white rounded-2xl border border-[var(--color-border-warm)] overflow-hidden transition-all duration-200 active:scale-[0.99] animate-fade-in-up"
-              style={{ animationDelay: `${getStaggerDelay(i)}s` }}
-            >
-              {/* Top: code + status + arrow — status NGOÀI Link để tránh navigate */}
-              <div className="flex items-center justify-between px-3.5 py-2.5 bg-[var(--color-cream)]/20 border-b border-[var(--color-border-warm)]/30">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-[11px] text-[var(--color-terra)] font-medium shrink-0">{order.order_code}</span>
-                  <InlineStatusSelect
-                    value={order.status}
-                    orderId={order.id}
-                    onUpdate={handleStatusUpdate}
-                    isOpen={activeDropdown === `m-status-${order.id}`}
-                    onToggle={() => toggleDropdown(`m-status-${order.id}`)}
-                  />
-                </div>
-                <Link href={`/don-hang/${order.id}`} className="p-1.5 -mr-1.5 rounded-lg hover:bg-[var(--color-cream)] transition-colors">
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </Link>
-              </div>
-
-              {/* Body */}
-              <div className="px-3.5 py-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-[13px] truncate">{order.customer_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{order.product_name} x{order.quantity}</p>
-                  </div>
-                  {(order.reference_images?.length > 0 || role === 'admin') && (
-                    <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} />
-                  )}
-                </div>
-
-                {/* Meta row */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Ngày đặt</p>
-                    <InlineDateCell
-                      value={order.start_date}
-                      orderId={order.id}
-                      onUpdate={handleDateUpdate}
-                      isEditing={activeDropdown === `m-date-${order.id}`}
-                      onStartEdit={() => toggleDropdown(`m-date-${order.id}`)}
-                      onStopEdit={closeAllDropdowns}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-muted-foreground mb-0.5">Nghệ nhân</p>
-                    <InlineStaffSelect
-                      currentStaff={order.assigned_staff}
-                      orderId={order.id}
-                      onUpdate={handleStaffUpdate}
-                      isOpen={activeDropdown === `m-staff-${order.id}`}
-                      onToggle={() => toggleDropdown(`m-staff-${order.id}`)}
-                    />
-                  </div>
-                  {order.latest_update && (
-                    <span className="text-[10px] text-muted-foreground ml-auto">
-                      🕐 {formatRelativeTime(order.latest_update.created_at)}
-                    </span>
-                  )}
-                </div>
-
-              </div>
+            <div key={order.id} className="animate-fade-in-up" style={{ animationDelay: `${getStaggerDelay(i)}s` }}>
+              <OrderCardMobile
+                order={order}
+                role={role}
+                activeDropdown={activeDropdown}
+                toggleDropdown={toggleDropdown}
+                closeAllDropdowns={closeAllDropdowns}
+                handleStatusUpdate={handleStatusUpdate}
+                handleDateUpdate={handleDateUpdate}
+                handleStaffUpdate={handleStaffUpdate}
+                isTablet={false}
+              />
             </div>
           ))}
 
@@ -391,6 +217,8 @@ function OrdersTableContent() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
