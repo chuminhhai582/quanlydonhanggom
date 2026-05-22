@@ -12,6 +12,8 @@ import { formatDate } from '@/lib/utils/date';
 import { formatPrice, getStatusLabel } from '@/lib/utils/order-code';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { StaffName } from '@/lib/types';
+import InlineStaffSelect from '@/components/orders/InlineStaffSelect';
 import {
   ArrowLeft, Pencil, Camera, Image as ImageIcon, Clock, X
 } from 'lucide-react';
@@ -33,8 +35,26 @@ export default function OrderDetailPage() {
   const galleryRef = useRef<HTMLInputElement>(null);
 
   // State đơn hàng — fetch từ Supabase
-  const { orders: ordersState, setOrders: setOrdersState } = useOrders(role || 'viewer');
+  const { orders: ordersState, setOrders: setOrdersState, loading } = useOrders(role || 'viewer');
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
+
+  // Fetch staff từ Supabase
+  const [staffList, setStaffList] = useState<StaffName[]>([]);
+  useMemo(() => {
+    async function fetchStaff() {
+      try {
+        const res = await fetch('/api/staff');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setStaffList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      }
+    }
+    fetchStaff();
+  }, []);
 
   // State ảnh tiến độ — mới nhất trước
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
@@ -70,6 +90,15 @@ export default function OrderDetailPage() {
       prev.map(o => o.id === orderId ? { ...o, reference_images: images, updated_at: new Date().toISOString() } : o)
     );
   }, []);
+
+  const handleStaffUpdate = useCallback((orderId: string, staffId: string) => {
+    const staff = staffList.find(s => s.id === staffId);
+    if (!staff) return;
+    setOrdersState(prev =>
+      prev.map(o => o.id === orderId ? { ...o, assigned_staff: [staff], updated_at: new Date().toISOString() } : o)
+    );
+    toast.success(`Đã chọn nghệ nhân: ${staff.name}`);
+  }, [staffList]);
 
   // Xử lý chụp ảnh / tải ảnh
   const handleFileInput = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +196,14 @@ export default function OrderDetailPage() {
     return formatDate(iso, 'dd/MM HH:mm');
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-pulse text-[var(--color-terra)]">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
   if (!order) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8 text-center">
@@ -260,12 +297,13 @@ export default function OrderDetailPage() {
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground w-20 shrink-0">Nghệ nhân</span>
               <div className="flex flex-wrap gap-1.5">
-                {order.assigned_staff.map(staff => (
-                  <Badge key={staff.id} variant="secondary" className="rounded-full text-xs">
-                    <span className="w-2 h-2 rounded-full mr-1" style={{ background: staff.avatar_color }} />
-                    {staff.name}
-                  </Badge>
-                ))}
+                <InlineStaffSelect
+                  currentStaff={order.assigned_staff}
+                  orderId={order.id}
+                  onUpdate={handleStaffUpdate}
+                  isOpen={staffDropdownOpen}
+                  onToggle={() => setStaffDropdownOpen(prev => !prev)}
+                />
               </div>
             </div>
           </div>
