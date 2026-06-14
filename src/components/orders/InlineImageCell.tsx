@@ -165,6 +165,32 @@ export default function InlineImageCell({
     }
   }, [imgs, localNotes, editingNote, orderId, onUpdate]);
 
+  const handleSaveNoteDirect = useCallback(async (idx: number, value: string) => {
+    const newNotes = [...localNotes];
+    while (newNotes.length < imgs.length) {
+      newNotes.push('');
+    }
+    newNotes[idx] = value;
+    
+    setLocalNotes(newNotes);
+
+    const toastId = toast.loading('Đang lưu ghi chú...');
+    try {
+      const updateRes = await fetch(`/api/orders/${orderId}/images`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: imgs, notes: newNotes })
+      });
+      if (!updateRes.ok) throw new Error('Lỗi cập nhật CSDL');
+      
+      if (onUpdate) onUpdate(orderId, imgs, newNotes);
+      toast.success('Đã lưu ghi chú', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Có lỗi xảy ra khi lưu ghi chú', { id: toastId });
+    }
+  }, [imgs, localNotes, orderId, onUpdate]);
+
   return (
     <div className="flex flex-col items-start w-full">
       <div className="flex items-center gap-2">
@@ -216,14 +242,42 @@ export default function InlineImageCell({
         )}
       </div>
 
-      {showNotesList && imgs.some((_, i) => localNotes[i]) && (
-        <div className="mt-2.5 space-y-1.5 text-xs text-muted-foreground w-full max-w-md">
-          {imgs.map((_, i) => localNotes[i] ? (
-            <div key={i} className="flex items-start gap-1.5 bg-[var(--color-cream)]/30 border border-[var(--color-border-warm)]/40 p-2 rounded-lg">
-              <span className="font-semibold text-[var(--color-terra)] shrink-0">Ảnh #{i + 1}:</span>
-              <span className="italic break-words text-[var(--color-text-primary)]">{localNotes[i]}</span>
+      {showNotesList && imgs.length > 0 && (
+        <div className="mt-3.5 space-y-2.5 w-full max-w-lg">
+          {imgs.map((src, i) => (
+            <div key={i} className="flex items-center gap-3 bg-[var(--color-cream)]/20 border border-[var(--color-border-warm)]/45 p-2.5 rounded-xl shadow-sm animate-fade-in-up">
+              <img src={src} className="w-11 h-11 rounded-lg object-cover shrink-0 border border-[var(--color-border-warm)] shadow-sm" alt={`Ảnh #${i + 1}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-[var(--color-terra)] uppercase tracking-wider">Ghi chú ảnh mẫu #{i + 1}</p>
+                {canUpload ? (
+                  <input
+                    type="text"
+                    value={localNotes[i] || ''}
+                    onChange={(e) => {
+                      const newNotes = [...localNotes];
+                      while (newNotes.length < imgs.length) {
+                        newNotes.push('');
+                      }
+                      newNotes[i] = e.target.value;
+                      setLocalNotes(newNotes);
+                    }}
+                    onBlur={(e) => handleSaveNoteDirect(i, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="Nhập ghi chú cho ảnh này..."
+                    className="w-full text-xs bg-white border border-[var(--color-border-warm)] rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-[var(--color-terra)] focus:ring-1 focus:ring-[var(--color-terra)]/20 transition-all text-[var(--color-text-primary)]"
+                  />
+                ) : (
+                  <p className="text-xs italic text-[var(--color-text-primary)] mt-1.5 break-words bg-white/40 px-2.5 py-1.5 rounded-lg border border-[var(--color-border-warm)]/20">
+                    {localNotes[i] || 'Chưa có ghi chú.'}
+                  </p>
+                )}
+              </div>
             </div>
-          ) : null)}
+          ))}
         </div>
       )}
 
