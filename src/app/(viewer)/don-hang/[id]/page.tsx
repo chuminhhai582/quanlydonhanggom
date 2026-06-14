@@ -85,9 +85,14 @@ export default function OrderDetailPage() {
     toast.success(`Đã cập nhật: ${getStatusLabel(newStatus)}`);
   }, []);
 
-  const handleImagesUpdate = useCallback((orderId: string, images: string[]) => {
+  const handleImagesUpdate = useCallback((orderId: string, images: string[], notes?: string[]) => {
     setOrdersState(prev =>
-      prev.map(o => o.id === orderId ? { ...o, reference_images: images, updated_at: new Date().toISOString() } : o)
+      prev.map(o => o.id === orderId ? { 
+        ...o, 
+        reference_images: images, 
+        reference_images_notes: notes || [], 
+        updated_at: new Date().toISOString() 
+      } : o)
     );
   }, []);
 
@@ -270,7 +275,14 @@ export default function OrderDetailPage() {
             {(order.reference_images?.length > 0 || role === 'admin') && (
               <div className="flex items-start gap-3">
                 <span className="text-xs text-muted-foreground w-20 shrink-0 pt-2">Ảnh mẫu</span>
-                <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} onUpdate={handleImagesUpdate} />
+                <InlineImageCell 
+                  images={order.reference_images || []} 
+                  notes={order.reference_images_notes || []} 
+                  orderId={order.id} 
+                  canUpload={role === 'admin'} 
+                  onUpdate={handleImagesUpdate}
+                  showNotesList={true}
+                />
               </div>
             )}
             {order.custom_requirements && (

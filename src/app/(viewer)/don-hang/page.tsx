@@ -96,9 +96,14 @@ function OrdersTableContent() {
     );
   }, []);
 
-  const handleImagesUpdate = useCallback((orderId: string, images: string[]) => {
+  const handleImagesUpdate = useCallback((orderId: string, images: string[], notes?: string[]) => {
     setOrdersState(prev =>
-      prev.map(o => o.id === orderId ? { ...o, reference_images: images, updated_at: new Date().toISOString() } : o)
+      prev.map(o => o.id === orderId ? { 
+        ...o, 
+        reference_images: images, 
+        reference_images_notes: notes || [], 
+        updated_at: new Date().toISOString() 
+      } : o)
     );
   }, []);
 

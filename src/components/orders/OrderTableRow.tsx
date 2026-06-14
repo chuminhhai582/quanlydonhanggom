@@ -19,7 +19,7 @@ interface OrderTableRowProps {
   handleStatusUpdate: (orderId: string, status: OrderStatus) => void;
   handleDateUpdate: (orderId: string, date: string) => void;
   handleStaffUpdate: (orderId: string, staffId: string) => void;
-  handleImagesUpdate?: (orderId: string, images: string[]) => void;
+  handleImagesUpdate?: (orderId: string, images: string[], notes?: string[]) => void;
 }
 
 export default function OrderTableRow({
@@ -47,7 +47,13 @@ export default function OrderTableRow({
         <p className="text-xs text-muted-foreground">x{order.quantity}</p>
       </td>
       <td className="py-3 px-3 xl:px-4">
-        <InlineImageCell images={order.reference_images || []} orderId={order.id} canUpload={role === 'admin'} onUpdate={handleImagesUpdate} />
+        <InlineImageCell 
+          images={order.reference_images || []} 
+          notes={order.reference_images_notes || []} 
+          orderId={order.id} 
+          canUpload={role === 'admin'} 
+          onUpdate={handleImagesUpdate} 
+        />
       </td>
       <td className="py-3 px-3 xl:px-4">
         <InlineDateCell

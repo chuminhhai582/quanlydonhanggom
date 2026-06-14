@@ -62,6 +62,7 @@ export async function fetchOrders(role: 'admin' | 'viewer'): Promise<OrderWithCu
         quantity: order.quantity,
         custom_requirements: order.custom_requirements,
         reference_images: order.reference_images || [],
+        reference_images_notes: order.reference_images_notes || [],
         status: order.status as OrderStatus,
         start_date: order.start_date,
         due_date: order.due_date,

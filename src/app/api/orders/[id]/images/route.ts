@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
       .from('orders')
       .update({ 
         reference_images: body.images,
+        reference_images_notes: body.notes || [],
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId)

@@ -39,6 +39,7 @@ export interface Order {
   quantity: number;
   custom_requirements: string | null;
   reference_images: string[];
+  reference_images_notes?: string[] | null;
   status: OrderStatus;
   start_date: string | null;
   due_date: string;
